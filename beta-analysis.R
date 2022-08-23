@@ -99,44 +99,40 @@ beta_pcoa_ui <- function(id) {
     ns <- NS(id)
     res <- div(
         class = "tab-body",
-        fluidRow(column(width=6,
-                        shinydashboardPlus::box(
-                          width = 12, title = "PCoA Analysis",
-                          status = "warning",
-                          collapsible = TRUE,
-                          pickerInput(ns("std_method"),
-                                      "Standardization method:",
-                                      choices = std_method,
-                                      selected = "total"
-                          ),
-                          pickerInput(ns("dist_method"),
-                                      "Distance method:",
-                                      choices = dist_method,
-                                      selected = "bray"
-                          ),
-                          pickerInput(ns("group"), "Group:", NULL),
-                          actionButton(ns("btn"), "Submit"),
-                          downloadButton(ns("downloadTable"), "Download Table")
-                        )
-                        ),
-                 column(width=6,
-                        shinydashboardPlus::box(
-                          width = 12,
-                          title = "Plot Download",
-                          status = "success",
-                          solidHeader = FALSE,
-                          collapsible = TRUE,
-                          numericInput(ns("width_slider"), "width:", 10,1, 20),
-                          numericInput(ns("height_slider"), "height:", 8, 1, 20),
-                          radioButtons(inputId = ns('extPlot'),
-                                       label = 'Output format',
-                                       choices = c('PDF' = '.pdf',"PNG" = '.png','JPEG'='.jpeg'),
-                                       inline = TRUE),
-                          downloadButton(ns("downloadPlot"), "Download Plot")
-                        )
-                        )
-                 ),
-        plotOutput(ns("plot"))
+        shinydashboardPlus::box(
+          width = 12, title = "PCoA Analysis",
+          status = "warning",
+          collapsible = TRUE,
+          pickerInput(ns("std_method"),
+                      "Standardization method:",
+                      choices = std_method,
+                      selected = "total"
+          ),
+          pickerInput(ns("dist_method"),
+                      "Distance method:",
+                      choices = dist_method,
+                      selected = "bray"
+          ),
+          pickerInput(ns("group"), "Group:", NULL),
+          materialSwitch(ns("btn_adonis"), value = TRUE,label = "Adonis:",status = "primary"),
+          actionButton(ns("btn"), "Submit")
+        ),
+        shinydashboardPlus::box(
+          width = 12,
+          title = "Plot Download",
+          status = "success",
+          solidHeader = FALSE,
+          collapsible = TRUE,
+          plotOutput(ns("plot")),
+          numericInput(ns("width_slider"), "width:", 10,1, 20),
+          numericInput(ns("height_slider"), "height:", 8, 1, 20),
+          radioButtons(inputId = ns('extPlot'),
+                       label = 'Output format',
+                       choices = c('PDF' = '.pdf',"PNG" = '.png','JPEG'='.jpeg'),
+                       inline = TRUE),
+          downloadButton(ns("downloadPlot"), "Download Plot"),
+          downloadButton(ns("downloadTable"), "Download Table")
+        )
     )
     return(res)
         #jqui_resizable(
@@ -184,9 +180,20 @@ beta_pcoa_mod <- function(id, mpse) {
                 if (dist %in% c("unifrac", "wunifrac")) {
                     otutree(mpse) <- treeda()
                 }
-                mpse %>%
-                    mp_decostand(.abundance = Abundance, method = std) %>%
-                    mp_cal_pcoa(.abundance = !!std, distmethod = dist, action = "add")
+                group <- isolate({input$group})
+
+                mp_pcoa <- mpse %>%
+                  mp_decostand(.abundance = Abundance, method = std) %>%
+                  mp_cal_pcoa(.abundance = !!std, 
+                              distmethod = dist, 
+                              action = "add") %>%
+                  mp_adonis(.abundance = !!std,
+                            .formula = as.formula(paste0("~", group)),
+                            distmethod = dist,
+                            permutations = 999,
+                            action = "add"
+                  )
+                return(mp_pcoa)
             })
             
             p_PCoA <- reactive({
@@ -200,21 +207,40 @@ beta_pcoa_mod <- function(id, mpse) {
                 mp_extract_sample() %>%
                 pull(!!group) %>%
                 is.character()
+              
               p <- mp_pcoa() %>%
                 mp_plot_ord(
                   .ord = pcoa,
                   .group = !!sym(group),
                   .color = !!sym(group),
                   ellipse = ellipse
-                ) +
-                cmap_theme
+                ) + cmap_theme
+              
+              if(input$btn_adonis) {
+                adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
+                #NEW VERSION OF MP mp_extract_internal_attr()
+                # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                #                  env = list(r2 = adonis_value$R2[1] %>% round(5),
+                #                             pvalue = adonis_value$`Pr(>F)`[1])
+                # ) %>% as.expression
+                
+                #older versionmp_pcoa()$aov.tab
+                eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                                 env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
+                                            pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
+                ) %>% as.expression
+                
+                p <- p + geom_text(aes(x = Inf, y = Inf),
+                                   label = eq,
+                                   hjust = 1.1, 
+                                   vjust = 1.1,
+                                   check_overlap = TRUE,
+                                   inherit.aes = FALSE)
+                return(p)
+              }
               return(p)
             })
             
-            # ----show hiddenbox----
-            observeEvent(input$btn, {
-              shinyjs::show(id = "hiddenplot")
-            })
             
             output$plot <- renderPlot({
               req(p_PCoA())
@@ -255,12 +281,16 @@ beta_pcoa_mod <- function(id, mpse) {
                        height = input$height_slider)
                 })
             
-            # output$downloadTable <- downloadHandler(
-            #   filename = function(){ "PCoA_data.csv" },
-            #   content = function(file){
-            #     req(mp_pcoa())
-            #     write.csv(mp_pcoa() %>% mp_extract_sample, file)
-            #   })
+            output$downloadTable <- downloadHandler(
+              filename = function(){ "MP_Data.csv" },
+              content = function(file){
+                req(mp_pcoa())
+                table <- mp_pcoa() %>% mp_extract_sample 
+                n <- names(table)[sapply(table, class) == "list"] 
+                write.csv(table %>% select(-c(n)), 
+                          file,
+                          row.names = FALSE)
+              })
         }
     )
 }
