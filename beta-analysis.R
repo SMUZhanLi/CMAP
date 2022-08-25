@@ -306,12 +306,12 @@ beta_pcoa_mod <- function(id, mpse) {
               req(p_PCoA())
               multiInput(
                 inputId = ns("sub"),
-                label = "box order",
-                choices = mp_pcoa() %>% mp_extract_sample %>% select(input$group) %>% unique,
+                label = NULL,
+                choices = mp_extract_sample(mp_pcoa())[[input$group]] %>% unique,
                 options = list(
                   enable_search = FALSE,
                   non_selected_header = "Choose between:",
-                  selected_header = "You have selected:"
+                  selected_header = "New order:"
                 ),
                 width = "100%"
               )
