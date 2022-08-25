@@ -132,6 +132,16 @@ beta_pcoa_ui <- function(id) {
                        inline = TRUE),
           downloadButton(ns("downloadPlot"), "Download Plot"),
           downloadButton(ns("downloadTable"), "Download Table")
+        ),
+        shinydashboardPlus::box(
+          width = 12,
+          title = "Plot Motify",
+          status = "warning",
+          collapsible = TRUE,
+          #pickerInput(ns("bar"), "Bar chart order:", NULL),
+          uiOutput(ns("box_order")),
+          fluidRow(),
+          actionButton(ns("btn_box_order"), "Submit")
         )
     )
     return(res)
@@ -151,6 +161,7 @@ beta_pcoa_mod <- function(id, mpse) {
     moduleServer(
         id,
         function(input, output, session) {
+            ns <- session$ns
             treeda <- reactiveVal({
                 readRDS("data/treeda.rds")
             })
@@ -219,16 +230,16 @@ beta_pcoa_mod <- function(id, mpse) {
               if(input$btn_adonis) {
                 adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
                 #NEW VERSION OF MP mp_extract_internal_attr()
-                # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                #                  env = list(r2 = adonis_value$R2[1] %>% round(5),
-                #                             pvalue = adonis_value$`Pr(>F)`[1])
-                # ) %>% as.expression
+                eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                                 env = list(r2 = adonis_value$R2[1] %>% round(5),
+                                            pvalue = adonis_value$`Pr(>F)`[1])
+                ) %>% as.expression
                 
                 #older versionmp_pcoa()$aov.tab
-                eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                                 env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
-                                            pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
-                ) %>% as.expression
+                # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                #                  env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
+                #                             pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
+                # ) %>% as.expression
                 
                 p <- p + geom_text(aes(x = Inf, y = Inf),
                                    label = eq,
@@ -291,6 +302,21 @@ beta_pcoa_mod <- function(id, mpse) {
                           file,
                           row.names = FALSE)
               })
+            output$box_order <- renderUI({
+              req(p_PCoA())
+              multiInput(
+                inputId = ns("sub"),
+                label = "box order",
+                choices = mp_pcoa() %>% mp_extract_sample %>% select(input$group) %>% unique,
+                options = list(
+                  enable_search = FALSE,
+                  non_selected_header = "Choose between:",
+                  selected_header = "You have selected:"
+                ),
+                width = "100%"
+              )
+            })
+            
         }
     )
 }
