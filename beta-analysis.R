@@ -128,21 +128,16 @@ beta_pcoa_ui <- function(id) {
           numericInput(ns("height_slider"), "height:", 8, 1, 20),
           radioButtons(inputId = ns('extPlot'),
                        label = 'Output format',
-                       choices = c('PDF' = '.pdf',"PNG" = '.png','JPEG'='.jpeg'),
+                       choices = c('PDF' = '.pdf',"PNG" = '.png','SVG'='.svg'),
                        inline = TRUE),
           downloadButton(ns("downloadPlot"), "Download Plot"),
           downloadButton(ns("downloadTable"), "Download Table")
         ),
-        shinydashboardPlus::box(
-          width = 12,
-          title = "Plot Motify",
-          status = "warning",
-          collapsible = TRUE,
-          #pickerInput(ns("bar"), "Bar chart order:", NULL),
-          uiOutput(ns("box_order")),
-          fluidRow(),
-          actionButton(ns("btn_box_order"), "Submit")
-        )
+        uiOutput(ns("box_order"))
+        # orderInput('source', 'Source', items = c("Jan", "Feb", "Mar", "Apr", "May"),
+        #            as_source = TRUE, connect = 'dest'),
+        # orderInput('dest', 'Dest', items = NULL, placeholder = 'Drag items here...'),
+
     )
     return(res)
         #jqui_resizable(
@@ -209,7 +204,6 @@ beta_pcoa_mod <- function(id, mpse) {
             
             p_PCoA <- reactive({
               req(mp_pcoa())
-              req(inherits(mp_pcoa(), "MPSE"))
               input$btn
               group <- isolate({
                 input$group
@@ -226,6 +220,8 @@ beta_pcoa_mod <- function(id, mpse) {
                   .color = !!sym(group),
                   ellipse = ellipse
                 ) + cmap_theme
+              
+              p$data[[group]] %<>% factor(level = input$items1)
               
               if(input$btn_adonis) {
                 adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
@@ -252,6 +248,12 @@ beta_pcoa_mod <- function(id, mpse) {
               return(p)
             })
             
+            box_leves <- reactive({
+              req(mp_pcoa())
+              input$btn
+              box_leves <- mp_extract_sample(mp_pcoa())[[input$group]] %>% unique
+              return(box_leves)
+              })
             
             output$plot <- renderPlot({
               req(p_PCoA())
@@ -275,8 +277,6 @@ beta_pcoa_mod <- function(id, mpse) {
                 #     cmap_theme
                 # return(p)
             })
-          
-            
             # observeEvent(input$btn, {
             #   shinyjs::show(id = "plotdownload_box")
             # })
@@ -302,19 +302,11 @@ beta_pcoa_mod <- function(id, mpse) {
                           file,
                           row.names = FALSE)
               })
+            
             output$box_order <- renderUI({
-              req(p_PCoA())
-              multiInput(
-                inputId = ns("sub"),
-                label = NULL,
-                choices = mp_extract_sample(mp_pcoa())[[input$group]] %>% unique,
-                options = list(
-                  enable_search = FALSE,
-                  non_selected_header = "Choose between:",
-                  selected_header = "New order:"
-                ),
-                width = "100%"
-              )
+              req(input$btn)
+              orderInput(ns('items1'), 'Boxes order (Drag items below)', items = box_leves())
+
             })
             
         }
