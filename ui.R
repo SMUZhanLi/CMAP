@@ -1,4 +1,4 @@
-source("globel.R")
+source("global.R")
 source("upload-data.R")
 source("filter-data.R")
 source("alpha-analysis.R")

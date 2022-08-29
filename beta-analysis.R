@@ -32,15 +32,31 @@ beta_pca_ui <- function(id) {
             pickerInput(ns("group"), "Group:", NULL),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "600px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 100, maxHeight = 900,
-                minWidth = 300, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("PCA_plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "600px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 100, maxHeight = 900,
+        #         minWidth = 300, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -68,7 +84,7 @@ beta_pca_mod <- function(id, mpse) {
                     mp_decostand(.abundance = Abundance, method = std) %>%
                     mp_cal_pca(.abundance = !!std, action = "add")
             })
-            output$plot <- renderPlot({
+            p_PCA <- reactive({
                 req(inherits(mp_pca(), "MPSE"))
                 input$btn
                 group <- isolate({
@@ -88,6 +104,36 @@ beta_pca_mod <- function(id, mpse) {
                     cmap_theme
                 return(p)
             })
+            
+            output$PCA_plot <- renderPlot({
+                req(p_PCA())
+                p_PCA()
+            })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("PCA_plot", input$extPlot, sep='')},
+                content = function(file){
+                    req(p_PCA())
+                    ggsave(file, 
+                           plot = p_PCA(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(p_PCA())
+                    table <- mp_pcoa() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
+            
+            
         }
     )
 }
@@ -128,7 +174,7 @@ beta_pcoa_ui <- function(id) {
           numericInput(ns("height_slider"), "height:", 8, 1, 20),
           radioButtons(inputId = ns('extPlot'),
                        label = 'Output format',
-                       choices = c('PDF' = '.pdf',"PNG" = '.png','SVG'='.svg'),
+                       choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
                        inline = TRUE),
           downloadButton(ns("downloadPlot"), "Download Plot"),
           downloadButton(ns("downloadTable"), "Download Table")
@@ -203,49 +249,48 @@ beta_pcoa_mod <- function(id, mpse) {
             })
             
             p_PCoA <- reactive({
-              req(mp_pcoa())
-              input$btn
-              group <- isolate({
-                input$group
-              })
-              ellipse <- mpse %>%
-                mp_extract_sample() %>%
-                pull(!!group) %>%
-                is.character()
-              
-              p <- mp_pcoa() %>%
-                mp_plot_ord(
-                  .ord = pcoa,
-                  .group = !!sym(group),
-                  .color = !!sym(group),
-                  ellipse = ellipse
-                ) + cmap_theme
-              
-              p$data[[group]] %<>% factor(level = input$items1)
-              
-              if(input$btn_adonis) {
-                adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
-                #NEW VERSION OF MP mp_extract_internal_attr()
-                eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                                 env = list(r2 = adonis_value$R2[1] %>% round(5),
-                                            pvalue = adonis_value$`Pr(>F)`[1])
-                ) %>% as.expression
+                req(mp_pcoa())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ellipse <- mpse %>%
+                    mp_extract_sample() %>%
+                    pull(!!group) %>%
+                    is.character()
                 
-                #older versionmp_pcoa()$aov.tab
-                # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                #                  env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
-                #                             pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
-                # ) %>% as.expression
+                p <- mp_pcoa() %>%
+                    mp_plot_ord(
+                        .ord = pcoa,
+                        .group = !!sym(group),
+                        .color = !!sym(group),
+                        ellipse = ellipse
+                    ) + cmap_theme
                 
-                p <- p + geom_text(aes(x = Inf, y = Inf),
-                                   label = eq,
-                                   hjust = 1.1, 
-                                   vjust = 1.1,
-                                   check_overlap = TRUE,
-                                   inherit.aes = FALSE)
+                p$data[[group]] %<>% factor(level = input$items1)
+                
+                if(input$btn_adonis) {
+                    adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
+                    #NEW VERSION OF MP mp_extract_internal_attr()
+                    # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                    #                  env = list(r2 = adonis_value$R2[1] %>% round(5),
+                    #                             pvalue = adonis_value$`Pr(>F)`[1])
+                    # ) %>% as.expression
+                    
+                    #older versionmp_pcoa()$aov.tab
+                    eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                                     env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
+                                                pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
+                    ) %>% as.expression
+                    p <- p + geom_text(aes(x = Inf, y = Inf),
+                                       label = eq,
+                                       hjust = 1.1, 
+                                       vjust = 1.1,
+                                       check_overlap = TRUE,
+                                       inherit.aes = FALSE)
+                    return(p)
+                }
                 return(p)
-              }
-              return(p)
             })
             
             box_leves <- reactive({
@@ -256,30 +301,9 @@ beta_pcoa_mod <- function(id, mpse) {
               })
             
             output$plot <- renderPlot({
-              req(p_PCoA())
-              p_PCoA()
-                # req(inherits(mp_pcoa(), "MPSE"))
-                # input$btn
-                # group <- isolate({
-                #     input$group
-                # })
-                # ellipse <- mpse %>%
-                #     mp_extract_sample() %>%
-                #     pull(!!group) %>%
-                #     is.character()
-                # p <- mp_pcoa() %>%
-                #     mp_plot_ord(
-                #         .ord = pcoa,
-                #         .group = !!sym(group),
-                #         .color = !!sym(group),
-                #         ellipse = ellipse
-                #     ) +
-                #     cmap_theme
-                # return(p)
+                req(p_PCoA())
+                p_PCoA()
             })
-            # observeEvent(input$btn, {
-            #   shinyjs::show(id = "plotdownload_box")
-            # })
             
             output$downloadPlot <- downloadHandler(
               filename = function(){
@@ -289,7 +313,8 @@ beta_pcoa_mod <- function(id, mpse) {
                 ggsave(file, 
                        plot = p_PCoA(), 
                        width = input$width_slider, 
-                       height = input$height_slider)
+                       height = input$height_slider,
+                       dpi = 300)
                 })
             
             output$downloadTable <- downloadHandler(
@@ -335,15 +360,31 @@ beta_nmds_ui <- function(id) {
             pickerInput(ns("group"), "Group:", NULL),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "600px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 100, maxHeight = 900,
-                minWidth = 300, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("nmds_plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "600px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 100, maxHeight = 900,
+        #         minWidth = 300, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -397,7 +438,8 @@ beta_nmds_mod <- function(id, mpse) {
                 stress <- gsub("^.+(stress.+$)", "\\1", stress)
                 return(list(stress = stress, res = res))
             })
-            output$plot <- renderPlot({
+            
+            p_nmds <- reactive({
                 req(inherits(mp_nmds()$res, "MPSE"))
                 input$btn
                 group <- isolate({
@@ -420,6 +462,34 @@ beta_nmds_mod <- function(id, mpse) {
                     theme(plot.title = element_text(hjust = 0.5))
                 return(p)
             })
+            
+            output$nmds_plot <- renderPlot({
+                req(p_nmds())
+                p_nmds()
+            })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("nmds_plot", input$extPlot, sep='')},
+                content = function(file){
+                    req(p_nmds())
+                    ggsave(file, 
+                           plot = p_nmds(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(p_nmds())
+                    table <- mp_pcoa() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
         }
     )
 }
@@ -462,15 +532,31 @@ beta_hcluster_ui <- function(id) {
             pickerInput(ns("group"), "Group:", NULL),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "600px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 100, maxHeight = 900,
-                minWidth = 300, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("hcluster_plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "600px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 100, maxHeight = 900,
+        #         minWidth = 300, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -512,7 +598,7 @@ beta_hcluster_mod <- function(id, mpse) {
                     mp_decostand(.abundance = Abundance, method = std) %>%
                     mp_cal_clust(.abundance = !!std, distmethod = dist, action = "get")
             })
-            output$plot <- renderPlot({
+            p_hcluster <- reactive({
                 req(inherits(mp_hcl(), "treedata"))
                 input$btn
                 group <- isolate({
@@ -533,6 +619,35 @@ beta_hcluster_mod <- function(id, mpse) {
                     )
                 return(p)
             })
+            
+            output$hcluster_plot <- renderPlot({
+                req(p_hcluster())
+                p_hcluster()
+            })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("hcluster_plot", input$extPlot, sep='')},
+                content = function(file){
+                    req(p_hcluster())
+                    ggsave(file, 
+                           plot =p_hcluster(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(p_hcluster())
+                    table <- mp_pcoa() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
+            
         }
     )
 }
@@ -652,16 +767,32 @@ beta_anosim_ui <- function(id) {
             numericInput(ns("permutations"), "Permutations:", value = 999),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        verbatimTextOutput(ns("text")),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "600px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 100, maxHeight = 900,
-                minWidth = 300, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("anosim_plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # verbatimTextOutput(ns("text")),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "600px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 100, maxHeight = 900,
+        #         minWidth = 300, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -722,17 +853,48 @@ beta_anosim_mod <- function(id, mpse) {
                 )
                 return(list(tbl = tbl, verbose = verbose))
             })
+            
             output$text <- renderText({
                 req(inherits(anosim_res()$tbl, "tbl"))
                 paste0(anosim_res()$verbose, collapse = " ")
             })
-            output$plot <- renderPlot({
+            
+            p_anosim <- reactive({
                 req(inherits(anosim_res()$tbl, "tbl"))
                 anosim_res()$tbl %>%
                     ggplot(aes(x = class, y = rank, fill = class)) +
                     geom_boxplot(notch = TRUE, varwidth = TRUE) +
                     cmap_theme
             })
+            
+            output$anosim_plot <- renderPlot({
+                req(p_anosim())
+                p_anosim()
+            })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("anosim_plot", input$extPlot, sep='')},
+                content = function(file){
+                    req(p_anosim())
+                    ggsave(file, 
+                           plot = p_anosim(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(p_anosim())
+                    table <- mp_pcoa() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
+            
         }
     )
 }

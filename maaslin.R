@@ -75,6 +75,22 @@ maaslin_ui <- function(id) {
             fluidRow(),
             actionButton(ns("btn"), "Submit")
         ),
+        # shinydashboardPlus::box(
+        #     width = 12,
+        #     title = "Plot Download",
+        #     status = "success",
+        #     solidHeader = FALSE,
+        #     collapsible = TRUE,
+        #     plotOutput(ns("plot")),
+        #     numericInput(ns("width_slider"), "width:", 10,1, 20),
+        #     numericInput(ns("height_slider"), "height:", 8, 1, 20),
+        #     radioButtons(inputId = ns('extPlot'),
+        #                  label = 'Output format',
+        #                  choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+        #                  inline = TRUE),
+        #     downloadButton(ns("downloadPlot"), "Download Plot"),
+        #     downloadButton(ns("downloadTable"), "Download Table")
+        # ),
         fluidRow(),
         jqui_resizable(
             plotOutput(ns("plot"), width = "800px"),
@@ -225,6 +241,31 @@ maaslin_mod <- function(id, mpse) {
             req(inherits(res(), "list"))
               res()$plot
           })
+          
+          output$downloadPlot <- downloadHandler(
+              filename = function(){
+                  paste("plot", input$extPlot, sep='')},
+              content = function(file){
+                  req(inherits(res(), "list"))
+                  ggsave(file, 
+                         plot = res()$plot, 
+                         width = input$width_slider, 
+                         height = input$height_slider,
+                         dpi = 300)
+              })
+          
+          # output$downloadTable <- downloadHandler(
+          #     filename = function(){ "MP_Data.csv" },
+          #     content = function(file){
+          #         req(p_PCA())
+          #         table <- mp_pcoa() %>% mp_extract_sample 
+          #         n <- names(table)[sapply(table, class) == "list"] 
+          #         write.csv(table %>% select(-c(n)), 
+          #                   file,
+          #                   row.names = FALSE)
+          #     })
+          
+          
           output$tbl<- renderDT({
             req(inherits(res(), "list"))
               res()$tbl

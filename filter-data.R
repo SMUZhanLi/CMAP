@@ -109,7 +109,7 @@ filter_data_mod <- function(id, mpse) {
                     options = list(
                         enable_search = FALSE,
                         non_selected_header = "Choose between:",
-                        selected_header = "You have selected:"
+                        selected_header = "Remove:"
                     ),
                     width = "100%"
                 )

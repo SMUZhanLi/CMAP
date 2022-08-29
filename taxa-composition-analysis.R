@@ -18,15 +18,31 @@ taxa_composition_ui <- function(id) {
             numericInput(ns("topn"), "Top most abundant:", value = 10),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "900px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 300, maxHeight = 900,
-                minWidth = 600, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("taxa_composition_plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "900px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 300, maxHeight = 900,
+        #         minWidth = 600, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -67,7 +83,7 @@ taxa_composition_mod <- function(id, mpse) {
                                   plot.group = is.group,
                                   force = TRUE)
             })
-            output$plot <- renderPlot({
+            p_taxa_composition <- reactive({
                 req(inherits(mp_abu(), "ggplot"))
                 mp_abu() +
                 # geom_col(position = position_stack(reverse = TRUE)) +
@@ -78,6 +94,34 @@ taxa_composition_mod <- function(id, mpse) {
                     legend.text = element_text(size = 16, family = "serif")
                 )
             })
+            
+            output$taxa_composition_plot <- renderPlot({
+                req(p_taxa_composition())
+                p_taxa_composition()
+            })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("taxa_composition_plot", input$extPlot, sep='')},
+                content = function(file){
+                    req(p_taxa_composition())
+                    ggsave(file, 
+                           plot = p_taxa_composition(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(p_taxa_composition())
+                    table <- mp_pcoa() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
         }
     )
 }
@@ -111,15 +155,31 @@ feature_composition_ui <- function(id) {
             pickerInput(ns("group"), "Group:", NULL),
             actionButton(ns("btn"), "Submit")
         ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "900px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 300, maxHeight = 900,
-                minWidth = 600, maxWidth = 1200
-            )
+        shinydashboardPlus::box(
+            width = 12,
+            title = "Plot Download",
+            status = "success",
+            solidHeader = FALSE,
+            collapsible = TRUE,
+            plotOutput(ns("plot")),
+            numericInput(ns("width_slider"), "width:", 10,1, 20),
+            numericInput(ns("height_slider"), "height:", 8, 1, 20),
+            radioButtons(inputId = ns('extPlot'),
+                         label = 'Output format',
+                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                         inline = TRUE),
+            downloadButton(ns("downloadPlot"), "Download Plot"),
+            downloadButton(ns("downloadTable"), "Download Table")
         )
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "900px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 300, maxHeight = 900,
+        #         minWidth = 600, maxWidth = 1200
+        #     )
+        # )
     )
     return(res)
 }
@@ -166,10 +226,32 @@ feature_composition_mod <- function(id, mpse) {
             })
 
             output$plot <- renderPlot({
-
                 req(inherits(mp_abu(), "ggplot"))
                 mp_abu()
             })
+            
+            output$downloadPlot <- downloadHandler(
+                filename = function(){
+                    paste("feature_composition", input$extPlot, sep='')},
+                content = function(file){
+                    req(mp_abu())
+                    ggsave(file, 
+                           plot = mp_abu(), 
+                           width = input$width_slider, 
+                           height = input$height_slider,
+                           dpi = 300)
+                })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "MP_Data.csv" },
+                content = function(file){
+                    req(mp_abu())
+                    table <- mp_abu() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
         }
     )
 }
