@@ -145,6 +145,17 @@ alpha_index_mod <- function(id, mpse) {
                            height = input$height_slider,
                            dpi = 300)
                     })
+            
+            output$downloadTable <- downloadHandler(
+                filename = function(){ "alpha_Data.csv" },
+                content = function(file){
+                    req(p_alpha_index())
+                    table <- mp_alpha() %>% mp_extract_sample 
+                    n <- names(table)[sapply(table, class) == "list"] 
+                    write.csv(table %>% select(-c(n)), 
+                              file,
+                              row.names = FALSE)
+                })
         }
     )
 }
@@ -250,8 +261,8 @@ rare_curve_ui <- function(id) {
                          label = 'Output format',
                          choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
                          inline = TRUE),
-            downloadButton(ns("downloadPlot"), "Download Plot"),
-            downloadButton(ns("downloadTable"), "Download Table")
+            downloadButton(ns("downloadPlot"), "Download Plot")
+            #downloadButton(ns("downloadTable"), "Download Table")
         )
         # fluidRow(),
         # jqui_resizable(

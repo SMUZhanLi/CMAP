@@ -1,15 +1,13 @@
 data_summary_ui <- function(id) {
-  ns <- NS(id)
-  res <- div(
-    class = "tab-body",
-    # shinydashboardPlus::box(
-    # width = 12,
-    # DT::dataTableOutput(ns("table"))
-    # ),
-    uiOutput(ns("summary")),
-    uiOutput(ns("overview"))
-  )
-  return(res)
+    ns <- NS(id)
+    res <- div(
+        class = "upload-body",
+        uiOutput(ns("summary")),
+        # box(title = "Sample Details", height = "auto",
+        #     DTOutput(ns("table"))),
+         uiOutput(ns("overview"))
+    )
+    return(res)
 }
 
 data_summary_mod <- function(id, mpse) {
@@ -27,9 +25,16 @@ data_summary_mod <- function(id, mpse) {
           arrange(Counts)
       })
       
-      output$table <- DT::renderDataTable({
-        mpse() %>% mp_extract_sample
+      
+      table <- reactive({
+          req(inherits(mpse(), "MPSE"))
+          table <- mpse() %>% mp_extract_sample 
+          n <- names(table)[sapply(table, class) == "list"] 
+          table %<>% select(-c(n))
+          return(table)
       })
+      
+      output$table <- DT::renderDataTable({ table() })
       
       #Render overview
       output$overview <- renderUI({
@@ -67,7 +72,7 @@ data_summary_mod <- function(id, mpse) {
             tags$b(paste0(taxa[-1], collapse = ";")),
             tags$b(sum(mpsum()[[2]])),
             tags$b(!is.null(input$treeda)),
-            tags$b((nrow(mpsum())))
+            tags$b((nrow(mpsum()))),
           )
         )
         shinydashboardPlus::box(
@@ -76,6 +81,7 @@ data_summary_mod <- function(id, mpse) {
           status = "success",
           collapsible = TRUE,
           summary_div
+          #materialSwitch(ns("btn_table"), value = FALSE,label = "Sample table",status = "primary")
         )
 
       })

@@ -113,10 +113,10 @@ taxa_composition_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "taxa_composition_Data.csv" },
                 content = function(file){
                     req(p_taxa_composition())
-                    table <- mp_pcoa() %>% mp_extract_sample 
+                    table <- p_taxa_composition()$data 
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,
@@ -243,10 +243,10 @@ feature_composition_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "feature_composition_Data.csv" },
                 content = function(file){
                     req(mp_abu())
-                    table <- mp_abu() %>% mp_extract_sample 
+                    table <- mp_abu()$data
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,

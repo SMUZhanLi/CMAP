@@ -123,10 +123,10 @@ beta_pca_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "PCA_Data.csv" },
                 content = function(file){
                     req(p_PCA())
-                    table <- mp_pcoa() %>% mp_extract_sample 
+                    table <- mp_pca() %>% mp_extract_sample 
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,
@@ -318,7 +318,7 @@ beta_pcoa_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-              filename = function(){ "MP_Data.csv" },
+              filename = function(){ "PCoA_Data.csv" },
               content = function(file){
                 req(mp_pcoa())
                 table <- mp_pcoa() %>% mp_extract_sample 
@@ -396,6 +396,7 @@ beta_nmds_mod <- function(id, mpse) {
              treeda <- reactiveVal({
                 readRDS("data/treeda.rds")
             })
+            #update input
             observe({
                 req(inherits(mpse, "MPSE"))
                 lev <- sapply(mp_extract_sample(mpse)[-1], function(n) length(unique(n)))
@@ -410,6 +411,7 @@ beta_nmds_mod <- function(id, mpse) {
                     )
                 }
             })
+            
             mp_nmds <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$submit
@@ -481,10 +483,10 @@ beta_nmds_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "nmda_Data.csv" },
                 content = function(file){
                     req(p_nmds())
-                    table <- mp_pcoa() %>% mp_extract_sample 
+                    table <- p_nmds()$data 
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,
@@ -631,17 +633,17 @@ beta_hcluster_mod <- function(id, mpse) {
                 content = function(file){
                     req(p_hcluster())
                     ggsave(file, 
-                           plot =p_hcluster(), 
+                           plot = p_hcluster(), 
                            width = input$width_slider, 
                            height = input$height_slider,
                            dpi = 300)
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "hcluster_Data.csv" },
                 content = function(file){
                     req(p_hcluster())
-                    table <- mp_pcoa() %>% mp_extract_sample 
+                    table <- p_hcluster()$data
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,
@@ -885,10 +887,10 @@ beta_anosim_mod <- function(id, mpse) {
                 })
             
             output$downloadTable <- downloadHandler(
-                filename = function(){ "MP_Data.csv" },
+                filename = function(){ "Anosim_Data.csv" },
                 content = function(file){
                     req(p_anosim())
-                    table <- mp_pcoa() %>% mp_extract_sample 
+                    table <- p_anosim()$data
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,
