@@ -272,16 +272,17 @@ beta_pcoa_mod <- function(id, mpse) {
                 if(input$btn_adonis) {
                     adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
                     #NEW VERSION OF MP mp_extract_internal_attr()
-                    # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                    #                  env = list(r2 = adonis_value$R2[1] %>% round(5),
-                    #                             pvalue = adonis_value$`Pr(>F)`[1])
-                    # ) %>% as.expression
+                    eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                                     env = list(r2 = adonis_value$R2[1] %>% round(5),
+                                                pvalue = adonis_value$`Pr(>F)`[1])
+                    ) %>% as.expression
                     
                     #older versionmp_pcoa()$aov.tab
-                    eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
-                                     env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
-                                                pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
-                    ) %>% as.expression
+                    # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
+                    #                  env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
+                    #                             pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
+                    # ) %>% as.expression
+                    
                     p <- p + geom_text(aes(x = Inf, y = Inf),
                                        label = eq,
                                        hjust = 1.1, 

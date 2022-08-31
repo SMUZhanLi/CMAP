@@ -2,10 +2,13 @@ data_summary_ui <- function(id) {
     ns <- NS(id)
     res <- div(
         class = "upload-body",
+        shinydashboardPlus::box(width = 12,
+                                title = "Sample Details",
+                                collapsible = TRUE,
+                                DTOutput(ns("table"))),
         uiOutput(ns("summary")),
-        # box(title = "Sample Details", height = "auto",
-        #     DTOutput(ns("table"))),
-         uiOutput(ns("overview"))
+
+          uiOutput(ns("overview"))
     )
     return(res)
 }
@@ -34,7 +37,15 @@ data_summary_mod <- function(id, mpse) {
           return(table)
       })
       
-      output$table <- DT::renderDataTable({ table() })
+      output$table <- renderDataTable({ 
+          DT::datatable(
+              table(),
+              options = list(
+                  scrollX = TRUE,
+                  scrollY = "400px"
+              )
+          )
+      })
       
       #Render overview
       output$overview <- renderUI({
@@ -72,7 +83,7 @@ data_summary_mod <- function(id, mpse) {
             tags$b(paste0(taxa[-1], collapse = ";")),
             tags$b(sum(mpsum()[[2]])),
             tags$b(!is.null(input$treeda)),
-            tags$b((nrow(mpsum()))),
+            tags$b((nrow(mpsum())))
           )
         )
         shinydashboardPlus::box(
@@ -80,7 +91,10 @@ data_summary_mod <- function(id, mpse) {
           title = "Text summary",
           status = "success",
           collapsible = TRUE,
-          summary_div
+          summary_div,
+          br(),
+          actionButton(ns("tb_btn"), "Show Sample Table"),
+          actionButton(ns("overview_btn"), "Show libray size")
           #materialSwitch(ns("btn_table"), value = FALSE,label = "Sample table",status = "primary")
         )
 
