@@ -1,14 +1,12 @@
+linebreaks <- function(n){HTML(strrep(br(), n))}
+
 data_summary_ui <- function(id) {
     ns <- NS(id)
     res <- div(
         class = "upload-body",
-        shinydashboardPlus::box(width = 12,
-                                title = "Sample Details",
-                                collapsible = TRUE,
-                                DTOutput(ns("table"))),
         uiOutput(ns("summary")),
-
-          uiOutput(ns("overview"))
+        uiOutput(ns("display_table")),
+        uiOutput(ns("overview"))
     )
     return(res)
 }
@@ -38,6 +36,7 @@ data_summary_mod <- function(id, mpse) {
       })
       
       output$table <- renderDataTable({ 
+          req(input$tb_btn)
           DT::datatable(
               table(),
               options = list(
@@ -47,9 +46,19 @@ data_summary_mod <- function(id, mpse) {
           )
       })
       
+      output$display_table <- renderUI({
+          req(input$tb_btn)
+          shinydashboardPlus::box(
+              width = 12,
+              status = "success",
+              title = "Sample Details",
+              collapsible = TRUE,
+              DTOutput(ns("table"))
+          )})
+      
       #Render overview
       output$overview <- renderUI({
-        req(inherits(mpsum(), "tbl"))
+        req(input$overview_btn)
         shinydashboardPlus::box(
           width = 12,
           title = "Library size overview",
@@ -92,9 +101,9 @@ data_summary_mod <- function(id, mpse) {
           status = "success",
           collapsible = TRUE,
           summary_div,
-          br(),
+          linebreaks(8),
           actionButton(ns("tb_btn"), "Show Sample Table"),
-          actionButton(ns("overview_btn"), "Show libray size")
+          actionButton(ns("overview_btn"), "Show Libray Size")
           #materialSwitch(ns("btn_table"), value = FALSE,label = "Sample table",status = "primary")
         )
 

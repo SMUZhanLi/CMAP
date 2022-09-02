@@ -16,6 +16,12 @@ hcl_layout <- c(
     "radial", "equal_angle", "daylight", "ape"
 )
 
+cols <- toupper(c(
+    "#bebada","#fb8072","#80b1d3","#fdb462","#b3de69","#fccde5","#FDBF6F","#A6CEE3",
+    "#56B4E9","#B2DF8A","#FB9A99","#CAB2D6","#A9C4E2","#79C360","#FDB762","#9471B4",
+    "#A4A4A4","#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#ffffcc","#e5d8bd",
+    "#fddaec","#f2f2f2","#8dd3c7","#d9d9d9"))
+
 beta_pca_ui <- function(id) {
     ns <- NS(id)
     res <- div(
@@ -264,8 +270,10 @@ beta_pcoa_mod <- function(id, mpse) {
                         .ord = pcoa,
                         .group = !!sym(group),
                         .color = !!sym(group),
-                        ellipse = ellipse
-                    ) + cmap_theme
+                        ellipse = ellipse,
+                        show.legend = FALSE
+                    ) + cmap_theme 
+                    
                 
                 p$data[[group]] %<>% factor(level = input$items1)
                 
@@ -497,69 +505,147 @@ beta_nmds_mod <- function(id, mpse) {
     )
 }
 
+# beta_hcluster_ui <- function(id) {
+#     ns <- NS(id)
+#     res <- div(
+#         class = "hcluster-body",
+#         shinydashboardPlus::box(
+#             width = NULL,
+#             title = "Hierarchical clustering analysis",
+#             status = "warning",
+#             collapsible = TRUE,
+#             pickerInput(ns("std_method"),
+#                         "Standardization method:",
+#                         choices = std_method,
+#                         selected = "hellinger"
+#             ),
+#             pickerInput(ns("dist_method"),
+#                         "Distance method:",
+#                         choices = dist_method,
+#                         selected = "bray"
+#             ),
+#             pickerInput(ns("hclust_method"),
+#                         "Hierarchical clustering method:",
+#                         choices = c(
+#                             "average",
+#                             "single",
+#                             "complete"
+#                         ),
+#                         selected = "average"
+#             ),
+#             pickerInput(ns("layout"),
+#                         "Graph type:",
+#                         choices = hcl_layout,
+#                         selected = "rectangular"
+#             ),
+#             pickerInput(ns("group"), "Group:", NULL),
+#             actionButton(ns("btn"), "Submit")
+#         ),
+#         shinydashboardPlus::box(
+#             width = NULL,
+#             title = "Plot Download",
+#             status = "success",
+#             solidHeader = FALSE,
+#             collapsible = TRUE,
+#             plotOutput(ns("hcluster_plot")),
+#             numericInput(ns("width_slider"), "width:", 10,1, 20),
+#             numericInput(ns("height_slider"), "height:", 8, 1, 20),
+#             radioButtons(inputId = ns('extPlot'),
+#                          label = 'Output format',
+#                          choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+#                          inline = TRUE),
+#             downloadButton(ns("downloadPlot"), "Download Plot"),
+#             downloadButton(ns("downloadTable"), "Download Table")
+#         )
+#             
+#         # fluidRow(),
+#         # jqui_resizable(
+#         #     plotOutput(ns("plot"), width = "600px"),
+#         #     operation = c("enable", "disable", "destroy", "save", "load"),
+#         #     options = list(
+#         #         minHeight = 100, maxHeight = 900,
+#         #         minWidth = 300, maxWidth = 1200
+#         #     )
+#         # )
+#     )
+#     return(res)
+# }
 
 
 beta_hcluster_ui <- function(id) {
     ns <- NS(id)
     res <- div(
-        class = "tab-body",
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Hierarchical clustering analysis",
-            status = "warning",
-            collapsible = TRUE,
-            pickerInput(ns("std_method"),
-                "Standardization method:",
-                choices = std_method,
-                selected = "total"
-            ),
-            pickerInput(ns("dist_method"),
-                "Distance method:",
-                choices = dist_method,
-                selected = "bray"
-            ),
-            pickerInput(ns("hclust_method"),
-                "Hierarchical clustering method:",
-                choices = c(
-                    "average",
-                    "single",
-                    "complete"
+        class = "hcluster-body",
+        fluidPage(
+            pageWithSidebar(
+                headerPanel(title= NULL),
+                sidebarPanel(
+                    width = 6,
+                    h3("Select methods"),
+                    pickerInput(ns("std_method"),
+                                "Standardization method:",
+                                choices = std_method,
+                                selected = "hellinger"
+                    ),
+                    pickerInput(ns("hclust_method"),
+                                "Hierarchical clustering method:",
+                                choices = c(
+                                    "average",
+                                    "single",
+                                    "complete"
+                                ),
+                                selected = "average"
+                    ),
+                    pickerInput(ns("dist_method"),
+                                "Distance method:",
+                                choices = dist_method,
+                                selected = "bray"
+                    ),
+                    actionButton(ns("btn"), "Submit"),
+                    
+                    h3("Plot Settings"),
+                    fluidRow(
+                        column(6,style=list("padding-right: 5px;"),
+                               pickerInput(ns("layout"),
+                                           "Layout:",
+                                           choices = hcl_layout,
+                                           selected = "rectangular")
+                        ),
+                        column(6,style=list("padding-left: 5px;"),
+                               colourpicker::colourInput(ns("in_track_colour_2"),
+                                                         label="Colour:",
+                                                         palette="limited",
+                                                         allowedCols=cols,
+                                                         value=cols[2])
+                        )
+                    ),
+                    
+                    h3("Plot Download"),
+                    fluidRow(
+                        column(width = 6,style=list("padding-right: 5px;"),
+                               numericInput(ns("width_slider"), "width:", 10, 1, 20),
+                               ),
+                        column(width = 6,style=list("padding-left: 5px;"),
+                               numericInput(ns("height_slider"), "height:", 8, 1, 20),
+                               )
+                    ),
+                    radioButtons(inputId = ns('extPlot'),
+                                 label = 'Output format',
+                                 choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+                                 inline = TRUE),
+                    tags$br(),
+                    fluidRow(
+                        column(6,style=list("padding-right: 5px; "),
+                               downloadButton(ns("downloadPlot"), "Download Plot")
+                        ),
+                        column(6,style=list("padding-left: 5px;"),
+                               downloadButton(ns("downloadTable"), "Download Table")
+                        )
+                    )
                 ),
-                selected = "average"
-            ),
-            pickerInput(ns("layout"),
-                "Graph type:",
-                choices = hcl_layout,
-                selected = "rectangular"
-            ),
-            pickerInput(ns("group"), "Group:", NULL),
-            actionButton(ns("btn"), "Submit")
-        ),
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Plot Download",
-            status = "success",
-            solidHeader = FALSE,
-            collapsible = TRUE,
-            plotOutput(ns("hcluster_plot")),
-            numericInput(ns("width_slider"), "width:", 10,1, 20),
-            numericInput(ns("height_slider"), "height:", 8, 1, 20),
-            radioButtons(inputId = ns('extPlot'),
-                         label = 'Output format',
-                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
-                         inline = TRUE),
-            downloadButton(ns("downloadPlot"), "Download Plot"),
-            downloadButton(ns("downloadTable"), "Download Table")
+                mainPanel(plotOutput("out_plot"))
+            )
         )
-        # fluidRow(),
-        # jqui_resizable(
-        #     plotOutput(ns("plot"), width = "600px"),
-        #     operation = c("enable", "disable", "destroy", "save", "load"),
-        #     options = list(
-        #         minHeight = 100, maxHeight = 900,
-        #         minWidth = 300, maxWidth = 1200
-        #     )
-        # )
     )
     return(res)
 }
@@ -600,7 +686,9 @@ beta_hcluster_mod <- function(id, mpse) {
                 mpse %>%
                     mp_decostand(.abundance = Abundance, method = std) %>%
                     mp_cal_clust(.abundance = !!std, distmethod = dist, action = "get")
+                
             })
+            
             p_hcluster <- reactive({
                 req(inherits(mp_hcl(), "treedata"))
                 input$btn
@@ -613,13 +701,17 @@ beta_hcluster_mod <- function(id, mpse) {
                 dist <- isolate({
                     input$dist_method
                 })
-                p <- mp_hcl() %>%
-                    ggtree(layout = layout) +
-                    geom_tippoint(aes(color = !!sym(group))) +
-                    theme(
-                        text = element_text(size = 18, family = "serif"),
-                        legend.text = element_text(size = 16, family = "serif")
-                    )
+                
+                #sample.clust <- mp_hcl() %>% mp_extract_internal_attr(name = 'SampleClust')
+                p <- mp_hcl() %>% ggtree(layout = layout) +
+                    geom_tippoint(aes(color = !!sym(group)))  +
+                    geom_tiplab(as_ylab = TRUE) +
+                    scale_x_continuous(expand=c(0, 0.01))
+                    # theme(
+                    #     text = element_text(size = 18, family = "serif"),
+                    #     legend.text = element_text(size = 16, family = "serif")
+                    # )
+                
                 return(p)
             })
             
