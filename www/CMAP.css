@@ -1,4 +1,6 @@
-
+.hcluster-body {
+    display: block;
+}
 
 h4 {
     line-height: 50px;
