@@ -55,32 +55,53 @@ beta_hcluster_ui <- function(id) {
                     #             choices = hcl_layout,
                     #             selected = "rectangular"
                     # ),
-                    uiOutput(ns("color")),
+                    #h5("Colors Setting"),
+
+                    #h5("Plot Download"),
                     fluidRow(
                         column(width = 6,
                                style=list("padding-right: 5px;"),
-                               numericInput(ns("width_slider"), "width:", 10,1, 20)
+                               numericInput(ns("width_slider"), "Width:", 10,1, 20)
                         ),
                         column(width = 6,
                                style=list("padding-left: 5px;"),
-                               numericInput(ns("height_slider"), "height:", 8, 1, 20)
+                               numericInput(ns("height_slider"), "Height:", 8, 1, 20)
                         )
                     ),
-                    radioButtons(inputId = ns('extPlot'),
-                                 label = 'Output format',
-                                 choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
-                                 inline = TRUE),
                     fluidRow(
                         column(width = 6,
-                               downloadButton(ns("downloadPlot"), "Plot")),
+                               style=list("padding-right: 5px;"),
+                               selectInput(inputId = ns('extPlot'),
+                                           label = 'Output format',
+                                           choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
+                               ),
+                        ),
                         column(width = 6,
-                               downloadButton(ns("downloadTable"), "Table"))
+                               style=list("padding-left: 5px;"),
+                               numericInput(ns("dpi"), "DPI:", 300, 100, 600)
+                        )
+                    ),
+
+                    fluidRow(
+                        column(width = 6,
+                               downloadButton(ns("downloadPlot"), "Download Plot")),
+                        column(width = 6,
+                               downloadButton(ns("downloadTable"), "Download Table"))
+                    ),
+                    
+                    h4("Color Palette"),
+                    fluidRow(
+                        column(6,
+                               uiOutput(ns("color"))),
+                        column(6,
+                               uiOutput(ns("fill")))
                     )
+                    #uiOutput(ns("color"))
                 )
             ),
             column(width = 9,
                    jqui_resizable(
-                       plotOutput(ns("hcluster_plot"), width = "600px"),
+                       plotOutput(ns("hcluster_plot"), width = '900px', height = '600px'),
                        operation = c("enable", "disable", "destroy", "save", "load"),
                        options = list(
                            minHeight = 300, maxHeight = 900,
@@ -100,6 +121,7 @@ beta_hcluster_mod <- function(id, mpse) {
             treeda <- reactiveVal({
                 readRDS("data/treeda.rds")
             })
+            
             observe({
                 req(inherits(mpse, "MPSE"))
                 lev <- sapply(mp_extract_sample(mpse)[-1], function(n) length(unique(n)))
@@ -116,9 +138,11 @@ beta_hcluster_mod <- function(id, mpse) {
                     )
                 }
             })
+            
             mp_hcl <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$submit
+                
                 std <- isolate({
                     input$std_method
                 })
@@ -128,11 +152,37 @@ beta_hcluster_mod <- function(id, mpse) {
                 if (dist %in% c("unifrac", "wunifrac")) {
                     otutree(mpse) <- treeda()
                 }
+                
                 mpse %>%
-                    mp_decostand(.abundance = Abundance, method = std) %>%
-                    mp_cal_clust(.abundance = !!std, distmethod = dist, action = "get")
+                    mp_decostand(.abundance = RareAbundance, method = std) %>%
+                    mp_cal_clust(.abundance = !!std, distmethod = dist, action = "get") #note: action = "get", tree data
+            })
+            
+            phy.tb <- eventReactive(input$btn, {
+                req(inherits(mpse, "MPSE"))
+                input$submit
+                
+                group <- isolate({
+                    input$group
+                })
+                
+                mpse %>%
+                    mp_cal_abundance( # for each samples
+                        .abundance = RareAbundance
+                    )%>%
+                    mp_cal_abundance( # for each groups
+                        .abundance = RareAbundance,
+                        .group = group
+                    ) %>% 
+                    mp_extract_abundance(
+                        taxa.class = Phylum,
+                        topn = 30
+                    ) %>%
+                    tidyr::unnest(cols = RareAbundanceBySample) %>%
+                    dplyr::rename(Phyla="label")
                 
             })
+            
             
             p_hcluster <- reactive({
                 req(inherits(mp_hcl(), "treedata"))
@@ -146,17 +196,76 @@ beta_hcluster_mod <- function(id, mpse) {
                 dist <- isolate({
                     input$dist_method
                 })
-                
-                #sample.clust <- mp_hcl() %>% mp_extract_internal_attr(name = 'SampleClust')
-                p <- mp_hcl() %>% ggtree(layout = "rectangular") +
-                    geom_tippoint(aes(color = !!sym(group)))  +
+               
+                p <- ggtree(mp_hcl(), layout = "rectangular") +
+                    geom_treescale(fontsize = 2) +
+                    geom_tippoint(mapping=aes(color = !!sym(group))) +
+                    geom_fruit(
+                        data = phy.tb(),
+                        geom = geom_col,
+                        mapping = aes(x = RelRareAbundanceBySample, y = Sample, fill = Phyla),
+                        orientation = "y",
+                        offset = 0.08,
+                        pwidth = 3,
+                        width = .6,
+                        axis.params = list(
+                            axis = "x",
+                            title = "The relative abundance of phyla (%)",
+                            title.size = 3,
+                            title.height = 0.04,
+                            text.size = 2,
+                            vjust = 1
+                        )
+                    ) +
                     geom_tiplab(as_ylab = TRUE) +
-                    scale_x_continuous(expand=c(0, 0.01)) + 
-                theme(
-                    text = element_text(size = 18, family = "serif"),
-                    legend.text = element_text(size = 16, family = "serif")
-                )
+                    scale_x_continuous(expand = c(0, 0.01))
+
+              
+                color_content <- mpse %>% mp_extract_sample %>%
+                    select(!!sym(group)) %>% unique #It is a tibble
+
+                taxonomy_content <- mpse %>% 
+                    mp_extract_taxonomy %>% 
+                    select(Phylum) %>% 
+                    unique()
                 
+                if(color_content[[1]] %>% is.numeric) {
+                    return(p)
+                }
+
+                ncolors <- color_content[[1]] %>% length
+                color_input <- lapply(seq(ncolors), function (i){
+                    input[[paste0("colors",i)]]
+                }) %>% unlist #calling input color
+                
+                ntax <- taxonomy_content[[1]] %>% length
+                fill_input <- lapply(seq(ntax), function (i){
+                    input[[paste0("fill",i)]]
+                }) %>% unlist #calling input fill
+                
+
+                if(length(color_input) != ncolors) {
+                    p + 
+                        scale_color_manual(values = cc(ncolors)) + 
+                        scale_fill_manual(values = cols2(ntax))
+                }else{
+                    p <- p + 
+                        scale_color_manual(values = color_input,
+                                           guide = guide_legend(
+                                               keywidth = .5,
+                                               keyheight = .5,
+                                               title.theme = element_text(size = 8),
+                                               label.theme = element_text(size = 6)
+                                           )) + 
+                        scale_fill_manual(values = fill_input,
+                                          guide = guide_legend(
+                                              keywidth = .5,
+                                              keyheight = .5,
+                                              title.theme = element_text(size = 8),
+                                              label.theme = element_text(size = 6)
+                                          ))
+                }
+
                 return(p)
             })
             
@@ -174,7 +283,7 @@ beta_hcluster_mod <- function(id, mpse) {
                            plot = p_hcluster(), 
                            width = input$width_slider, 
                            height = input$height_slider,
-                           dpi = 300)
+                           dpi = input$dpi)
                 })
             
             output$downloadTable <- downloadHandler(
@@ -188,28 +297,24 @@ beta_hcluster_mod <- function(id, mpse) {
                               row.names = FALSE)
                 })
             
-            #Motify color
+            #Modify color
             color_list <- reactive({
-                ns <- NS(id)
-                req(p_hcluster())
+                req(mp_hcl())
                 input$btn
-                
                 group <- isolate({
                     input$group
                 })
                 
-                group_content <- mpse %>% 
-                    mp_extract_sample %>% 
-                    select(!!sym(group)) %>% 
-                    unique  #It is tibble
-                
-                ncolors <- group_content[[1]] #convert to chr
-                pal <- cc(length(ncolors)) #calling color pallter
-                names(pal) <- ncolors #mapping legend names to colors 
-                
-                c <- lapply(seq(pal), function(i) {
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting  chr.
+                pal <- cc(length(name_colors)) #calling color palette
+                names(pal) <- name_colors #mapping names to colors 
+            
+                ns <- NS(id)
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
                     colorPickr(
-                        inputId = ns(paste0("cols",i)),
+                        inputId = ns(paste0("colors",i)),
                         label = names(pal[i]),
                         #swatches = scales::viridis_pal()(10),
                         selected = pal[[i]],
@@ -218,14 +323,46 @@ beta_hcluster_mod <- function(id, mpse) {
                         useAsButton = TRUE
                     )
                 })
-                return(c)
+           return(picks)
+            })
+            
+            #Modify color
+            fill_list <- reactive({
+                req(mp_hcl())
+                input$btn
+                
+                taxonomy_content <- mpse %>% 
+                    mp_extract_taxonomy %>% 
+                    select(Phylum) %>% 
+                    unique()
+
+                name_fills <- taxonomy_content[[1]] %>% sort #getting  chr.
+                pal <- cols2(length(name_fills)) #calling fill palette 2
+                names(pal) <- name_fills #mapping names to colors 
+                
+                ns <- NS(id)
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("fill",i)),
+                        label = names(pal[i]),
+                        #swatches = scales::viridis_pal()(10),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$color <- renderUI(
-                
                 #req(color_list)
                 color_list()
-                #tagList(color_list())
+                )
+            
+            output$fill<- renderUI(
+                #req(color_list)
+                fill_list()
             )
             
         }

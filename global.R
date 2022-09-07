@@ -19,10 +19,10 @@ library(shinybusy)
 #library(ggtree)
 options(shiny.maxRequestSize = 30*1024^2)
 
-double_colors<- c("#00A087FF", "#3C5488FF")
-
-pca_color <- list(scale_fill_manual(values = double_colors),
-                  scale_color_manual(values = double_colors))
+# double_colors<- c("#00A087FF", "#3C5488FF")
+# 
+# pca_color <- list(scale_fill_manual(values = double_colors),
+#                   scale_color_manual(values = double_colors))
 
 cmap_theme <- theme(
     text = element_text(size = 18, family = "serif"),
@@ -77,5 +77,5 @@ cc <- function(length) {
     
 }
 
-
+cols2 <- colorRampPalette(RColorBrewer::brewer.pal(8,"Set2"))
 

@@ -62,6 +62,7 @@ upload_data_mod <- function(id) {
           library(ggupset) 
           library(ggtree)
           library(ggstatsplot)
+          library(ggtreeExtra)
       #}
       })
       
@@ -134,6 +135,9 @@ upload_data_mod <- function(id) {
           error = function(e) e
           )
         }
+        
+        mpse %<>% mp_rrarefy
+        
         if (!inherits(mpse, "MPSE")) {
           showNotification("An error occurred while parsing the file",
                            type = "error"
