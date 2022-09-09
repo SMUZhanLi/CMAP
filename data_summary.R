@@ -3,7 +3,7 @@ linebreaks <- function(n){HTML(strrep(br(), n))}
 data_summary_ui <- function(id) {
     ns <- NS(id)
     res <- div(
-        class = "upload-body",
+        class = "summary-body ",
         uiOutput(ns("summary")),
         uiOutput(ns("display_table")),
         uiOutput(ns("overview"))

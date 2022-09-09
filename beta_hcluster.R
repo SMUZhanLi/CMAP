@@ -336,7 +336,9 @@ beta_hcluster_mod <- function(id, mpse) {
                     select(Phylum) %>% 
                     unique()
 
-                name_fills <- taxonomy_content[[1]] %>% sort #getting  chr.
+               # name_fills <- taxonomy_content[[1]] %>% sort #getting  chr.
+                name_fills <- phy.tb()$Phyla %>% levels
+                name_fills <- name_fills[name_fills != "Others"]
                 pal <- cols2(length(name_fills)) #calling fill palette 2
                 names(pal) <- name_fills #mapping names to colors 
                 

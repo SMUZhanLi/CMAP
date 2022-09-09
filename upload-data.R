@@ -3,39 +3,51 @@ upload_data_ui <- function(id) {
     ns <- NS(id)
     res <- div(
         class = "upload-body",
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Upload data",
-            status = "primary",
-            collapsible = TRUE,
-            fileInput(ns("otuda"),
-                label = "Abundance profile (.txt or .biom):",
-                accept = c(".txt", ".biom")
+        fluidRow(
+            column(4,
+                   shinydashboardPlus::box(
+                       width = NULL,
+                       title = "Upload data",
+                       status = "primary",
+                       collapsible = TRUE,
+                       fileInput(ns("otuda"),
+                                 label = "Abundance profile (.txt or .biom):",
+                                 accept = c(".txt", ".biom")
+                       ),
+                       fileInput(ns("metada"),
+                                 label = "Metadata file (.txt):",
+                                 accept = c(".txt")
+                       ),
+                       fileInput(ns("treeda"),
+                                 label = "(Optional) Phylogenetic tree (.tre or .nwk):",
+                                 accept = c(".tre", ".nwk")
+                       ),
+                       fluidRow(
+                           column(4, 
+                                  actionButton(ns("btn"), "Submit")),
+                           column(4,
+                                  downloadButton(ns("example"), "Example Data")),
+                           column(4,
+                                  downloadButton(ns("tutorial"), "Tutorial"))
+                       )
+                   )
+                   
             ),
-            fileInput(ns("metada"),
-                label = "Metadata file (.txt):",
-                accept = c(".txt")
-            ),
-            fileInput(ns("treeda"),
-                label = "(Optional) Phylogenetic tree (.tre or .nwk):",
-                accept = c(".tre", ".nwk")
-            ),
-            actionButton(ns("btn"), "Submit"),
-            downloadButton(ns("example"), "Example Data"),
-            downloadButton(ns("tutorial"), "Tutorial")
-        ),
-        shinyjs::hidden(
-          div(id = "hiddenbox", 
-              shinydashboardPlus::box(
-              width = 12,
-              title = "Data preview",
-              status = "success",
-              solidHeader = FALSE,
-              collapsible = TRUE,
-              verbatimTextOutput(ns("mp_print"))
-            )
-          )
+            column(8,
+                   shinyjs::hidden(
+                       div(id = "hiddenbox",
+                           shinydashboardPlus::box(
+                               width = NULL,
+                               title = "Data preview",
+                               status = "success",
+                               solidHeader = FALSE,
+                               collapsible = TRUE,
+                               verbatimTextOutput(ns("mp_print"))
+                           )
+                       )
+                   ))
         )
+        
     )
     return(res)
 }
