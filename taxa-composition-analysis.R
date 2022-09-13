@@ -1,39 +1,112 @@
 # taxa_level <- c("Kingdom", "Phylum", "Class", "Order",
 #                 "Family", "Genus", "Species")
-
-
 taxa_composition_ui <- function(id) {
     ns <- NS(id)
     res <- div(
-        class = "tab-body",
-        shinydashboardPlus::box(
-            width = 12, title = "Taxonomy composition Analysis",
-            status = "warning", collapsible = TRUE,
-            pickerInput(ns("level"),
-                        "Taxonomic level:",
-                        choices = NULL),
-            pickerInput(ns("group"), "Group:", NULL),
-            pickerInput(ns("ytype"), "Y axis:", c("relative", "count")),
-            pickerInput(ns("xtype"), "X axis:", c("sample", "group")),
-            numericInput(ns("topn"), "Top most abundant:", value = 10),
-            actionButton(ns("btn"), "Submit")
-        ),
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Plot Download",
-            status = "success",
-            solidHeader = FALSE,
-            collapsible = TRUE,
-            plotOutput(ns("taxa_composition_plot")),
-            numericInput(ns("width_slider"), "width:", 10,1, 20),
-            numericInput(ns("height_slider"), "height:", 8, 1, 20),
-            radioButtons(inputId = ns('extPlot'),
-                         label = 'Output format',
-                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
-                         inline = TRUE),
-            downloadButton(ns("downloadPlot"), "Download Plot"),
-            downloadButton(ns("downloadTable"), "Download Table")
+        #class = "tab-body",
+        fluidRow(
+            column(3,
+                   shinydashboardPlus::box(
+                       width = NULL,
+                       title = "Taxonomy composition Analysis",
+                       status = "warning",
+                       collapsible = TRUE,
+                       fluidRow(
+                           column(6,
+                                  pickerInput(ns("level"),
+                                              "Taxonomic level:",
+                                              choices = NULL)
+                           ),
+                           column(6,
+                                  pickerInput(ns("group"), "Group:", NULL)
+                           )
+                       ),
+                       fluidRow(
+                           column(6,
+                                  pickerInput(ns("ytype"), "Y axis:", c("relative", "count"))
+                           ),
+                           column(6,
+                                  pickerInput(ns("xtype"), "X axis:", c("sample", "group"))
+                           )
+                       ),
+                       numericInput(ns("topn"), "Top most abundant:", value = 10),
+                       actionButton(ns("btn"), "Submit")
+                   ),
+                   shinydashboardPlus::box(
+                       width = NULL,
+                       title = "Setting Plot",
+                       status = "warning",
+                       collapsible = TRUE,
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  numericInput(ns("width_slider"), "Width:", 10,1, 20)
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(ns("height_slider"), "Height:", 8, 1, 20)
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  selectInput(inputId = ns('extPlot'),
+                                              label = 'Output format',
+                                              choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
+                                  ),
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(ns("dpi"), "DPI:", 300, 100, 600)
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  downloadButton(ns("downloadPlot"), "Download Plot")),
+                           column(width = 6,
+                                  downloadButton(ns("downloadTable"), "Download Table"))
+                       )
+                   )
+            ),
+            column(9,
+                   jqui_resizable(
+                       plotOutput(ns("taxa_composition_plot"), width = '900px', height = '600px'),
+                       operation = c("enable", "disable", "destroy", "save", "load"),
+                       options = list(
+                           minHeight = 300, maxHeight = 900,
+                           minWidth = 300, maxWidth = 1200
+                       )
+                   ))
         )
+
+        # shinydashboardPlus::box(
+        #     width = 12, title = "Taxonomy composition Analysis",
+        #     status = "warning", collapsible = TRUE,
+        #     pickerInput(ns("level"),
+        #                 "Taxonomic level:",
+        #                 choices = NULL),
+        #     pickerInput(ns("group"), "Group:", NULL),
+        #     pickerInput(ns("ytype"), "Y axis:", c("relative", "count")),
+        #     pickerInput(ns("xtype"), "X axis:", c("sample", "group")),
+        #     numericInput(ns("topn"), "Top most abundant:", value = 10),
+        #     actionButton(ns("btn"), "Submit")
+        # ),
+        # shinydashboardPlus::box(
+        #     width = 12,
+        #     title = "Plot Download",
+        #     status = "success",
+        #     solidHeader = FALSE,
+        #     collapsible = TRUE,
+        #     plotOutput(ns("taxa_composition_plot")),
+        #     numericInput(ns("width_slider"), "width:", 10,1, 20),
+        #     numericInput(ns("height_slider"), "height:", 8, 1, 20),
+        #     radioButtons(inputId = ns('extPlot'),
+        #                  label = 'Output format',
+        #                  choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+        #                  inline = TRUE),
+        #     downloadButton(ns("downloadPlot"), "Download Plot"),
+        #     downloadButton(ns("downloadTable"), "Download Table")
+        # )
         # fluidRow(),
         # jqui_resizable(
         #     plotOutput(ns("plot"), width = "900px"),
@@ -109,7 +182,7 @@ taxa_composition_mod <- function(id, mpse) {
                            plot = p_taxa_composition(), 
                            width = input$width_slider, 
                            height = input$height_slider,
-                           dpi = 300)
+                           dpi = input$dpi)
                 })
             
             output$downloadTable <- downloadHandler(
@@ -143,34 +216,104 @@ taxa_composition_mod <- function(id, mpse) {
 feature_composition_ui <- function(id) {
     ns <- NS(id)
     res <- div(
-        class = "tab-body",
-        shinydashboardPlus::box(
-            width = 12, title = "Taxonomy composition Analysis",
-            status = "warning", collapsible = TRUE,
-            pickerInput(ns("level"),
-                        "Taxonomic level:",
-                        choices = NULL),
-            pickerInput(ns("feature"), NULL, NULL,
-            options = list(`actions-box` = TRUE), multiple = TRUE),
-            pickerInput(ns("group"), "Group:", NULL),
-            actionButton(ns("btn"), "Submit")
-        ),
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Plot Download",
-            status = "success",
-            solidHeader = FALSE,
-            collapsible = TRUE,
-            plotOutput(ns("plot")),
-            numericInput(ns("width_slider"), "width:", 10,1, 20),
-            numericInput(ns("height_slider"), "height:", 8, 1, 20),
-            radioButtons(inputId = ns('extPlot'),
-                         label = 'Output format',
-                         choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
-                         inline = TRUE),
-            downloadButton(ns("downloadPlot"), "Download Plot"),
-            downloadButton(ns("downloadTable"), "Download Table")
+        #class = "tab-body",
+        fluidRow(
+            column(3,
+                   shinydashboardPlus::box(
+                       width = NULL,
+                       title = "Taxonomy composition Analysis",
+                       status = "warning",
+                       collapsible = TRUE,
+                       fluidRow(
+                           column(6,
+                                  pickerInput(ns("level"),
+                                              "Taxonomic level:",
+                                              choices = NULL),
+                           ),
+                           column(6,
+                                  pickerInput(ns("feature"), 
+                                              "Details:", 
+                                              NULL,
+                                              options = list(`actions-box` = TRUE), 
+                                              multiple = TRUE),
+                           )
+                       ),
+                       pickerInput(ns("group"), "Group:", NULL),
+                       actionButton(ns("btn"), "Submit")
+                   ),
+                   shinydashboardPlus::box(
+                       width = NULL,
+                       title = "Setting Plot",
+                       status = "warning",
+                       collapsible = TRUE,
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  numericInput(ns("width_slider"), "Width:", 10,1, 20)
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(ns("height_slider"), "Height:", 8, 1, 20)
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  selectInput(inputId = ns('extPlot'),
+                                              label = 'Output format',
+                                              choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
+                                  ),
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(ns("dpi"), "DPI:", 300, 100, 600)
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  downloadButton(ns("downloadPlot"), "Download Plot")),
+                           column(width = 6,
+                                  downloadButton(ns("downloadTable"), "Download Table"))
+                       )
+                   )
+            ),
+            column(9,
+                   jqui_resizable(
+                       plotOutput(ns("plot"), width = '900px', height = '600px'),
+                       operation = c("enable", "disable", "destroy", "save", "load"),
+                       options = list(
+                           minHeight = 300, maxHeight = 900,
+                           minWidth = 300, maxWidth = 1200
+                       )
+                   ))
         )
+        # shinydashboardPlus::box(
+        #     width = 12, title = "Taxonomy composition Analysis",
+        #     status = "warning", collapsible = TRUE,
+        #     pickerInput(ns("level"),
+        #                 "Taxonomic level:",
+        #                 choices = NULL),
+        #     pickerInput(ns("feature"), NULL, NULL,
+        #     options = list(`actions-box` = TRUE), multiple = TRUE),
+        #     pickerInput(ns("group"), "Group:", NULL),
+        #     actionButton(ns("btn"), "Submit")
+        # ),
+        # shinydashboardPlus::box(
+        #     width = 12,
+        #     title = "Plot Download",
+        #     status = "success",
+        #     solidHeader = FALSE,
+        #     collapsible = TRUE,
+        #     plotOutput(ns("plot")),
+        #     numericInput(ns("width_slider"), "width:", 10,1, 20),
+        #     numericInput(ns("height_slider"), "height:", 8, 1, 20),
+        #     radioButtons(inputId = ns('extPlot'),
+        #                  label = 'Output format',
+        #                  choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
+        #                  inline = TRUE),
+        #     downloadButton(ns("downloadPlot"), "Download Plot"),
+        #     downloadButton(ns("downloadTable"), "Download Table")
+        # )
         # fluidRow(),
         # jqui_resizable(
         #     plotOutput(ns("plot"), width = "900px"),
@@ -239,7 +382,7 @@ feature_composition_mod <- function(id, mpse) {
                            plot = mp_abu(), 
                            width = input$width_slider, 
                            height = input$height_slider,
-                           dpi = 300)
+                           dpi = input$dpi)
                 })
             
             output$downloadTable <- downloadHandler(

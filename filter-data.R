@@ -13,15 +13,19 @@ filter_data_ui <- function(id) {
             title = "Feature filter",
             status = "warning",
             collapsible = TRUE,
-            numericInput(ns("abun"),
-                "Minimum counts of features:",
-                value = 1
-            ),
-            numericInput(ns("prop"),
-                "Prevalence in samples (%):",
-                value = 5,
-                max = 100,
-                min = 0
+            fluidRow(
+                column(6,
+                       numericInput(ns("abun"),
+                                    "Minimum counts of features:",
+                                    value = 1
+                       )),
+                column(6,
+                       numericInput(ns("prop"),
+                                    "Prevalence in samples (%):",
+                                    value = 5,
+                                    max = 100,
+                                    min = 0
+                       ))
             ),
             radioButtons(ns("rarefying"), "Data rarefying",
                 c(

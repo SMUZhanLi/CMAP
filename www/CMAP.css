@@ -2,7 +2,6 @@
     display: block;
 }
 
-
 .upload-body {
     width: 1200px;
     height: auto;
@@ -20,3 +19,11 @@
     font-size: larger;
 }
 
+.tab-body {
+    width: 600px;
+    height: auto;
+}
+
+.control-label {
+    width: 100%;
+}
