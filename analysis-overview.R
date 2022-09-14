@@ -73,7 +73,7 @@ analysis_overview_ui <- function() {
     res <- fixedPage(
         div(
             class = "panel-page-head",
-            h3(class = "panel-page-title", strong("分析总览"))
+            h3(class = "panel-page-title", strong("分析总览"), style="text-align: center;")
         ),
         fixedRow(
             column(
@@ -82,7 +82,7 @@ analysis_overview_ui <- function() {
                     width = 4,
                     box(
                         title = "分析前准备", status = "primary", solidHeader = TRUE,
-                        width = 12, height = "250px",
+                        width = 12, height = "400px",
                         tags$p("数据上传"),
                         tags$p("数据总览"),
                         tags$p("数据筛选")
@@ -92,7 +92,7 @@ analysis_overview_ui <- function() {
                     width = 4,
                     box(
                         title = "a多样性分析", status = "primary", solidHeader = TRUE,
-                        width = 12, height = "250px", 
+                        width = 12, height = "400px", 
                         tags$p("Alpha多样性指数"), 
                         tags$p("Alpha多样性组间比较"),
                         tags$p("稀释曲线")
@@ -102,7 +102,9 @@ analysis_overview_ui <- function() {
                     width = 4,
                     box(
                         title = "β多样性分析", status = "primary", solidHeader = TRUE,
-                        width = 12, height = "250px", tags$p("PCA分析"), tags$p("PCoA分析"),
+                        width = 12, height = "400px", 
+                        tags$p("PCA分析"), 
+                        tags$p("PCoA分析"),
                         tags$p("NMDS分析"), 
                         tags$p("Adonis分析"), 
                         tags$p("Anosim分析"),
@@ -116,7 +118,7 @@ analysis_overview_ui <- function() {
                 width = 4,
                 box(
                     title = "群落组成分析", status = "primary", solidHeader = TRUE,
-                    width = 12, height = "150px",
+                    width = 12, height = "250px",
                     tags$p("Bar图")
                     
                 )
@@ -125,7 +127,7 @@ analysis_overview_ui <- function() {
                 width = 4,
                 box(
                     title = "环境因子分析", status = "primary", solidHeader = TRUE,
-                    width = 12, height = "150px",
+                    width = 12, height = "250px",
                     tags$p("Maaslin分析")
                     # tags$p("CCA/RDA分析")
                 )
@@ -134,7 +136,7 @@ analysis_overview_ui <- function() {
                 width = 4,
                 box(
                     title = "差异物种分析", status = "primary", solidHeader = TRUE,
-                    width = 12, height = "150px", tags$p("LEfse分析")
+                    width = 12, height = "250px", tags$p("LEfse分析")
                 )
             )
             ) 

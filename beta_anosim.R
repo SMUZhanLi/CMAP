@@ -186,17 +186,62 @@ beta_anosim_mod <- function(id, mpse) {
                 return(list(tbl = tbl, verbose = verbose))
             })
             
-            output$text <- renderText({
-                req(inherits(anosim_res()$tbl, "tbl"))
-                paste0(anosim_res()$verbose, collapse = " ")
-            })
+            # output$text <- renderText({
+            #     req(inherits(anosim_res()$tbl, "tbl"))
+            #     paste0(anosim_res()$verbose, collapse = " ")
+            # })
             
-            p_anosim <- reactive({
+            p_anosim <- eventReactive(input$btn, {
                 req(inherits(anosim_res()$tbl, "tbl"))
-                anosim_res()$tbl %>%
-                    ggplot(aes(x = class, y = rank, fill = class)) +
-                    geom_boxplot(notch = TRUE, varwidth = TRUE) +
-                    cmap_theme
+                #req(input$submit)
+                plt <-  ggbetweenstats(
+                    data = anosim_res()$tbl,
+                    x = class,
+                    y = rank,
+                    bf.message = FALSE,
+                    results.subtitle = FALSE,
+                    plot.type = "box",
+                    ylab = "Bray-Curtis Rank",
+                    xlab = input$group,
+                    title = "Bray-Curtis Anosim",
+                    subtitle = paste0(anosim_res()$verbose[1:2], collapse = " "),
+                    centrality.plotting = FALSE
+                ) + 
+                    theme(
+                        text = element_text(
+                            #family = "Roboto", 
+                            size = 8, 
+                            color = "black"),
+                        plot.title = element_text(
+                            #family = "Lobster Two", 
+                            size = 20,
+                            face = "bold",
+                            color = "#2a475e"
+                        ),
+                        # Statistical annotations below the main title
+                        plot.subtitle = element_text(
+                            #family = "Roboto", 
+                            size = 12, 
+                            face = "bold",
+                            color="#1b2838"
+                        ),
+                        plot.title.position = "plot",# slightly different from default
+                        axis.text = element_text(size = 10, color = "black"),
+                        axis.title = element_text(size = 12),
+                        axis.ticks = element_blank(),
+                        axis.line = element_line(colour = "grey50"),
+                        panel.grid = element_line(color = "#b4aea9"),
+                        panel.grid.minor = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        panel.grid.major.y = element_line(linetype = "dashed"),
+                        # panel.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4"),
+                        # plot.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4")
+                    )
+                return(plt)
+                # anosim_res()$tbl %>%
+                #     ggplot(aes(x = class, y = rank, fill = class)) +
+                #     geom_boxplot(notch = TRUE, varwidth = TRUE) +
+                #     cmap_theme
             })
             
             output$anosim_plot <- renderPlot({

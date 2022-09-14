@@ -157,9 +157,9 @@ alpha_index_mod <- function(id, mpse) {
                         cols = !!index,
                         names_to = "Alpha")
                 if (is.numeric(tbl[[group]]) && type == "continuous") {
-                    p <- grouped_ggscatterstats(tbl, x = !!sym(group), y = value, grouping.var = Alpha, type = test)
+                    p <- grouped_ggscatterstats(tbl, x = !!sym(group), y = value, grouping.var = Alpha, type = test, results.subtitle =FALSE)
                 } else {
-                    p <- grouped_ggbetweenstats(tbl, x = !!sym(group), y = value, grouping.var = Alpha, type = test)
+                    p <- grouped_ggbetweenstats(tbl, x = !!sym(group), y = value, grouping.var = Alpha, type = test,results.subtitle =FALSE)
                 }
                 return(p)
             })

@@ -152,7 +152,6 @@ beta_pcoa_mod <- function(id, mpse) {
                         show.legend = FALSE
                     ) + cmap_theme 
                 
-                
                 p$data[[group]] %<>% factor(level = input$items1)
                 
                 if(input$btn_adonis) {
@@ -175,8 +174,14 @@ beta_pcoa_mod <- function(id, mpse) {
                                        vjust = 1.1,
                                        check_overlap = TRUE,
                                        inherit.aes = FALSE)
-                    return(p)
+                    #return(p)
                 }
+                
+                
+
+                   
+
+        
                 return(p)
             })
             
@@ -185,6 +190,12 @@ beta_pcoa_mod <- function(id, mpse) {
                 input$btn
                 box_leves <- mp_extract_sample(mp_pcoa())[[input$group]] %>% unique
                 return(box_leves)
+            })
+            
+            output$box_order <- renderUI({
+                req(mp_pcoa())
+                orderInput(ns('items1'), 'Boxes order (Drag items below)', items = box_leves())
+                
             })
             
             output$plot <- renderPlot({
@@ -215,11 +226,7 @@ beta_pcoa_mod <- function(id, mpse) {
                               row.names = FALSE)
                 })
             
-            output$box_order <- renderUI({
-                req(input$btn)
-                orderInput(ns('items1'), 'Boxes order (Drag items below)', items = box_leves())
-                
-            })
+
             
         }
     )
