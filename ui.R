@@ -10,6 +10,7 @@ source("beta_anosim.R")
 source("beta_hcluster.R")
 source("taxa-composition-analysis.R")
 source("taxa-diff-analysis.R")
+source("taxa_diff_tree.R")
 source("maaslin.R")
 source("analysis-overview.R")
 source("data_summary.R")
@@ -53,14 +54,15 @@ sidebar <- dashboardSidebar(
             # menuSubItem("Heatmap图", tabName = "taxa_diff_heatmap")
         ),
         menuItem(
+            "差异菌（群）分析",
+            # menuSubItem("ANCOM分析", tabName = "ancom"),
+            menuSubItem("LEfSe分析", tabName = "lefse"),
+            menuSubItem("Diff-clade plot", tabName = "diff_clade")
+        ),
+        menuItem(
             "环境因子分析",
             # menuSubItem("CCA分析", tabName = "cca"),
             menuSubItem("Maaslin2分析", tabName = "maaslin")
-        ),
-        menuItem(
-            "差异物种分析",
-            # menuSubItem("ANCOM分析", tabName = "ancom"),
-            menuSubItem("LEfSe分析", tabName = "lefse")
         )
         # menuItem(
         #     "进化分析",
@@ -94,6 +96,7 @@ body <- dashboardBody(
         tabItem("taxa_diff", taxa_composition_ui("taxa_diff")),
         tabItem("feature_diff", feature_composition_ui("feature_diff")),
         tabItem("lefse", lefse_ui("lefse")),
+        tabItem("diff_clade", diff_clade_ui("diff_clade")),
         tabItem("maaslin", maaslin_ui("maaslin"))
     )
 )

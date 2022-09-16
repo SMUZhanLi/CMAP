@@ -15,6 +15,7 @@ server <- function(input, output, session) {
       taxa_composition_mod("taxa_diff", mpse_filter$mpse)
       feature_composition_mod("feature_diff", mpse_filter$mpse)
       lefse_mod("lefse", mpse_filter$mpse)
+      diff_clade_mod("diff_clade", mpse_filter$mpse)
       maaslin_mod("maaslin", mpse_filter$mpse)
     })
     
