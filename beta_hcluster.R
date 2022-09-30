@@ -304,14 +304,13 @@ beta_hcluster_mod <- function(id, mpse) {
                 group <- isolate({
                     input$group
                 })
-                
+                ns <- NS(id)
                 color_content <- mpse %>% mp_extract_sample %>% 
                     select(!!sym(group)) %>% unique #It is a tibble
                 name_colors <- color_content[[1]] %>% sort #getting  chr.
                 pal <- cc(length(name_colors)) #calling color palette
                 names(pal) <- name_colors #mapping names to colors 
             
-                ns <- NS(id)
                 picks <- lapply(seq(pal), function(i) {#building multiple color pickers
                     colorPickr(
                         inputId = ns(paste0("colors",i)),

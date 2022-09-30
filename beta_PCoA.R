@@ -63,6 +63,11 @@ beta_pcoa_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -161,27 +166,43 @@ beta_pcoa_mod <- function(id, mpse) {
                                      env = list(r2 = adonis_value$R2[1] %>% round(5),
                                                 pvalue = adonis_value$`Pr(>F)`[1])
                     ) %>% as.expression
-                    
+
                     #older versionmp_pcoa()$aov.tab
                     # eq <- substitute(expr = italic(R)^2~"="~r2~","~italic(p)~"="~pvalue,
                     #                  env = list(r2 = adonis_value$aov.tab$R2[1] %>% round(5),
                     #                             pvalue = adonis_value$aov.tab$`Pr(>F)`[1])
                     # ) %>% as.expression
-                    
+
                     p <- p + geom_text(aes(x = Inf, y = Inf),
                                        label = eq,
-                                       hjust = 1.1, 
+                                       hjust = 1.1,
                                        vjust = 1.1,
                                        check_overlap = TRUE,
                                        inherit.aes = FALSE)
-                    #return(p)
                 }
                 
+                color_content <- mpse %>% mp_extract_sample %>%
+                    select(!!sym(group)) %>% unique #It is a tibble
                 
-
-                   
-
-        
+                if(color_content[[1]] %>% is.numeric) {
+                    return(p)
+                }
+                
+                ncolors <- color_content[[1]] %>% length #length of group 
+                color_input <- lapply(seq(ncolors), function (i){
+                    input[[paste0("colors",i)]]
+                }) %>% unlist #calling input color by length of group 
+                
+                if(length(color_input) != ncolors) {
+                    p <- p + 
+                        scale_color_manual(values = cc(ncolors)) + 
+                        scale_fill_manual(values = cc(ncolors)) 
+                }else{
+                    p <- p + 
+                        scale_color_manual(values = color_input) + 
+                        scale_fill_manual(values = color_input)
+                    
+                }
                 return(p)
             })
             
@@ -190,6 +211,33 @@ beta_pcoa_mod <- function(id, mpse) {
                 input$btn
                 box_leves <- mp_extract_sample(mp_pcoa())[[input$group]] %>% unique
                 return(box_leves)
+            })
+            
+            #Modify color
+            color_list <- reactive({
+                req(mp_pcoa())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                pal <- cc(length(name_colors)) #calling color palette
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$box_order <- renderUI({
@@ -202,6 +250,11 @@ beta_pcoa_mod <- function(id, mpse) {
                 req(p_PCoA())
                 p_PCoA()
             })
+            
+            output$color <- renderUI(
+                #req(color_list)
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){

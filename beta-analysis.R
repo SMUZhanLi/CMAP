@@ -24,7 +24,7 @@ beta_pca_ui <- function(id) {
             column(3,
                    shinydashboardPlus::box(
                        width = NULL,
-                       title = "Alpha-diversity Index",
+                       title = "PCA Analysis",
                        status = "warning",
                        collapsible = TRUE,
                        fluidRow(
@@ -74,6 +74,11 @@ beta_pca_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -88,44 +93,6 @@ beta_pca_ui <- function(id) {
                    ))
         )
         
-        # 
-        # shinydashboardPlus::box(
-        #     width = 12, title = "PCA Analysis",
-        #     status = "warning",
-        #     collapsible = TRUE,
-        #     pickerInput(ns("std_method"),
-        #         "Standardization method:",
-        #         choices = std_method,
-        #         selected = "total"
-        #     ),
-        #     pickerInput(ns("group"), "Group:", NULL),
-        #     actionButton(ns("btn"), "Submit")
-        # ),
-        # shinydashboardPlus::box(
-        #     width = 12,
-        #     title = "Plot Download",
-        #     status = "success",
-        #     solidHeader = FALSE,
-        #     collapsible = TRUE,
-        #     plotOutput(ns("PCA_plot")),
-        #     numericInput(ns("width_slider"), "width:", 10,1, 20),
-        #     numericInput(ns("height_slider"), "height:", 8, 1, 20),
-        #     radioButtons(inputId = ns('extPlot'),
-        #                  label = 'Output format',
-        #                  choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff'),
-        #                  inline = TRUE),
-        #     downloadButton(ns("downloadPlot"), "Download Plot"),
-        #     downloadButton(ns("downloadTable"), "Download Table")
-        # )
-        # fluidRow(),
-        # jqui_resizable(
-        #     plotOutput(ns("plot"), width = "600px"),
-        #     operation = c("enable", "disable", "destroy", "save", "load"),
-        #     options = list(
-        #         minHeight = 100, maxHeight = 900,
-        #         minWidth = 300, maxWidth = 1200
-        #     )
-        # )
     )
     return(res)
 }
@@ -159,25 +126,83 @@ beta_pca_mod <- function(id, mpse) {
                 group <- isolate({
                     input$group
                 })
+                
                 ellipse <- mpse %>%
                     mp_extract_sample() %>%
                     pull(!!group) %>%
                     is.character()
+                
                 p <- mp_pca() %>%
                     mp_plot_ord(
                         .ord = pca,
                         .group = !!sym(group),
                         .color = !!sym(group),
-                        ellipse = ellipse
+                        ellipse = FALSE
                     ) +
                     cmap_theme
+                
+                
+                color_content <- mpse %>% mp_extract_sample %>%
+                    select(!!sym(group)) %>% unique #It is a tibble
+                
+                if(color_content[[1]] %>% is.numeric) {
+                    return(p)
+                }
+                
+                ncolors <- color_content[[1]] %>% length #length of group 
+                color_input <- lapply(seq(ncolors), function (i){
+                    input[[paste0("colors",i)]]
+                }) %>% unlist #calling input color by length of group 
+                
+                if(length(color_input) != ncolors) {
+                    p <- p + 
+                        scale_color_manual(values = cc(ncolors)) + 
+                        scale_fill_manual(values = cc(ncolors)) 
+                }else{
+                    p <- p + 
+                        scale_color_manual(values = color_input) + 
+                        scale_fill_manual(values = color_input)
+                                          
+                }
                 return(p)
+            })
+
+            #Modify color
+            color_list <- reactive({
+                req(mp_pca())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                pal <- cc(length(name_colors)) #calling color palette
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$PCA_plot <- renderPlot({
                 req(p_PCA())
                 p_PCA()
             })
+            
+            output$color <- renderUI(
+                #req(color_list)
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){

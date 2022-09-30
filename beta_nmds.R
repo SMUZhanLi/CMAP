@@ -6,7 +6,7 @@ beta_nmds_ui <- function(id) {
             column(3,
                    shinydashboardPlus::box(
                        width = NULL,
-                       title = "Alpha-diversity Index",
+                       title = "NMDS Analysis",
                        status = "warning",
                        collapsible = TRUE,
                        fluidRow(
@@ -61,6 +61,11 @@ beta_nmds_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -192,16 +197,73 @@ beta_nmds_mod <- function(id, mpse) {
                         ellipse = ellipse
                     ) +
                     cmap_theme
+                
                 p <- p +
                     ggtitle(mp_nmds()$stress) +
                     theme(plot.title = element_text(hjust = 0.5))
+                
+                color_content <- mpse %>% mp_extract_sample %>%
+                    select(!!sym(group)) %>% unique #It is a tibble
+                
+                if(color_content[[1]] %>% is.numeric) {
+                    return(p)
+                }
+                
+                ncolors <- color_content[[1]] %>% length #length of group 
+                color_input <- lapply(seq(ncolors), function (i){
+                    input[[paste0("colors",i)]]
+                }) %>% unlist #calling input color by length of group 
+                
+                if(length(color_input) != ncolors) {
+                    p <- p + 
+                        scale_color_manual(values = cc(ncolors)) + 
+                        scale_fill_manual(values = cc(ncolors)) 
+                }else{
+                    p <- p + 
+                        scale_color_manual(values = color_input) + 
+                        scale_fill_manual(values = color_input)
+                    
+                }
+
                 return(p)
+            })
+            
+            #Modify color
+            color_list <- reactive({
+                req(mp_nmds())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                pal <- cc(length(name_colors)) #calling color palette
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$nmds_plot <- renderPlot({
                 req(p_nmds())
                 p_nmds()
             })
+            
+            output$color <- renderUI(
+                #req(color_list)
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){

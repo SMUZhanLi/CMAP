@@ -140,27 +140,37 @@ taxa_composition_mod <- function(id, mpse) {
             })
         
             
-            mp_abu <- eventReactive(input$btn, {
+            mp_comp <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$btn
-                level <- isolate({input$level})
-                is.relative <- isolate({
-                    ifelse(input$ytype == "relative", TRUE, FALSE)
-                })
+                # level <- isolate({input$level})
+                # is.relative <- isolate({
+                #     ifelse(input$ytype == "relative", TRUE, FALSE)
+                # })
                 group <- isolate({input$group})
-                topn <- isolate({input$topn})
-                is.group <- isolate({
-                    ifelse(input$xtype == "group", TRUE, FALSE)
-                })
+                # topn <- isolate({input$topn})
+                # is.group <- isolate({
+                #     ifelse(input$xtype == "group", TRUE, FALSE)
+                # })
                 
-                p <- mpse %>%
-                mp_plot_abundance(.abundance = Abundance,
-                                  .group = !!sym(group),
-                                  taxa.class = !!sym(level),
-                                  topn = topn,
-                                  relative = is.relative,
-                                  plot.group = is.group,
-                                  force = TRUE) #+ 
+                mp_comp <- mpse %>%
+                    mp_cal_abundance( # for each samples
+                        .abundance = RareAbundance
+                    ) %>%
+                    mp_cal_abundance( # for each groups 
+                        .abundance=RareAbundance,
+                        .group= group
+                    )
+                return(mp_comp)
+            })
+                # p <- mpse %>%
+                # mp_plot_abundance(.abundance = Abundance,
+                #                   .group = !!sym(group),
+                #                   taxa.class = !!sym(level),
+                #                   topn = topn,
+                #                   relative = is.relative,
+                #                   plot.group = is.group,
+                #                   force = TRUE) #+ 
                     # theme(
                     #     text = element_text(size = 18, family = "serif"),
                     #     axis.text.x = element_text(size = 11, family = "serif"),
@@ -173,63 +183,100 @@ taxa_composition_mod <- function(id, mpse) {
                 # }) %>% unlist
                 # 
                 # p$data %<>% mutate(Sample = factor(Sample, levels = x_level))
-                 return(p)
-            })
-            
-            sampele_level <- reactive({ #get sample level from mpse
-                req(inherits(mpse, "MPSE")) 
-                group <- isolate({input$group})
-                #group_contents <- mpse %>% select(!!sym(group)) %>% unique 
-                group_contents <- mp_abu()$data %>% select(!!sym(group)) %>% unique 
-                group_contents <- group_contents[[1]]
-                
-                sample2group <- lapply(group_contents, function(i) {
-                    mpse %>% filter(!!sym(group) == i) %>% colnames %>% sort
-                }) 
-                names(sample2group) <- group_contents
-                return(sample2group)
-            })
+            #      return(p)
+            # })
             
             p_taxa_composition <- reactive({
-                req(inherits(mp_abu(), "ggplot"))
-                p <- mp_abu() +
-                # geom_col(position = position_stack(reverse = TRUE)) +
-                theme(
-                    text = element_text(size = 18, family = "serif"),
-                    axis.text.x = element_text(size = 11, family = "serif"),
-                    axis.text.y = element_text(size = 16, family = "serif"),
-                    legend.text = element_text(size = 16, family = "serif")
-                )
+                req(inherits(mp_comp(), "MPSE"))
+                
+                level <- isolate({input$level})
+                is.relative <- isolate({
+                    ifelse(input$ytype == "relative", TRUE, FALSE)
+                })
+                group <- isolate({input$group})
+                topn <- isolate({input$topn})
+                is.group <- isolate({
+                    ifelse(input$xtype == "group", TRUE, FALSE)
+                })
+                
+                p <- mp_comp() %>%
+                    mp_plot_abundance(.abundance = RareAbundance,
+                                      .group = !!sym(group),
+                                      taxa.class = !!sym(level),
+                                      topn = topn,
+                                      relative = is.relative,
+                                      plot.group = is.group,
+                                      force = TRUE) +
+                    theme(
+                        text = element_text(size = 18, family = "serif"),
+                        axis.text.x = element_text(size = 11, family = "serif"),
+                        axis.text.y = element_text(size = 16, family = "serif"),
+                        legend.text = element_text(size = 16, family = "serif")
+                    )
 
-                x_level <- lapply(seq(sampele_level()), function (i){
-                    input[[paste0("items",i)]]
-                }) %>% unlist
+                # if(input$xtype == "sample") {
+                #     x_level <- lapply(seq(sampele_level()), function (i){
+                #         input[[paste0("items",i)]]
+                #     }) %>% unlist
+                #     
+                #     p$data %<>% mutate(Sample = factor(Sample, levels = x_level))
+                # }else {
+                #     p$data[[group]] %<>% factor(level = input$items_group)
+                # }
 
-                p$data %<>% mutate(Sample = factor(Sample, levels = x_level))
                 return(p)
+            })
+            
+            observeEvent(input$go, {
+                values$myresults <- sample(1:20, 5, T)
+            })  
+            
+            
+            sampele_level <- reactive({ #get sample level from mpse
+                req(p_taxa_composition())
+                group <- isolate({input$group})
+                #group_contents <- mpse %>% select(!!sym(group)) %>% unique
+                group_contents <-  p_taxa_composition()$data %>% select(!!sym(group)) %>% unique
+                group_contents <- group_contents[[1]]
+                
+                if(input$xtype == "sample") {
+                    sample2group <- lapply(group_contents, function(i) {
+                        mpse %>% filter(!!sym(group) == i) %>% colnames %>% sort
+                    })
+                    names(sample2group) <- group_contents
+                    return(sample2group)
+                }else {
+                    return(group_contents)
+                }
             })
             
             output$taxa_composition_plot <- renderPlot({
                 req(p_taxa_composition())
                 p_taxa_composition()
             })
+         
             
-
-            
-            output$sampele_order <- renderUI({ #order UI
+            output$sampele_order <-  renderUI({ #order UI
                 req(p_taxa_composition())
                 group <- isolate({input$group})
-                lapply(seq(sampele_level()), function(i) {
-                    orderInput(inputId = ns(paste0("items",i)), 
-                               label = paste0("Order of ", group, "--", 
-                                              names(sampele_level())[i]), 
-                               items = sampele_level()[[i]] )
-                    
-                })
+                if(input$xtype == "sample") {
+                    lapply(seq(sampele_level()), function(i) {
+                        orderInput(inputId = ns(paste0("items",i)),
+                                   label = paste0("Order of ", group, "--",
+                                                  names(sampele_level())[i]),
+                                   items = sampele_level()[[i]] )
+                    })
+                }else{
+                    orderInput(ns('items_group'), 
+                               'Boxes order (Drag items below)', 
+                               items = sampele_level())
+                }
             })
+         
+
             
             
-            output$downloadPlot <- downloadHandler(
+           output$downloadPlot <- downloadHandler(
                 filename = function(){
                     paste("taxa_composition_plot", input$extPlot, sep='')},
                 content = function(file){
@@ -330,6 +377,11 @@ feature_composition_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -409,7 +461,8 @@ feature_composition_mod <- function(id, mpse) {
                     choices = unique(mp_extract_taxonomy(mpse)[[input$level]])
                 )
             })
-            mp_abu <- eventReactive(input$btn, {
+            
+            mp_comp <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$submit
                 level <- isolate({input$level})
@@ -420,22 +473,92 @@ feature_composition_mod <- function(id, mpse) {
                     mp_extract_tree() %>%
                     tidyr::unnest(AbundanceBySample) %>%
                     dplyr::filter(nodeClass == level) %>%
-                    dplyr::filter(label %in% feature) %>%
-                    grouped_ggbetweenstats(x = !!sym(group), y = RelAbundanceBySample, grouping.var = label, type = "robust")
+                    dplyr::filter(label %in% feature) #%>%
+                    #grouped_ggbetweenstats(x = !!sym(group), y = RelAbundanceBySample, grouping.var = label, type = "robust")
             })
 
-            output$plot <- renderPlot({
-                req(inherits(mp_abu(), "ggplot"))
-                mp_abu()
+            p_single_bacteria <- reactive({
+                req(mp_comp())
+                input$btn
+                group <- isolate({input$group})
+
+                if (is.numeric(mp_comp()[[group]]) && type == "continuous") {
+                    stop("Does not apply to continuous variables")
+                } else {
+                    color_content <- mpse %>% mp_extract_sample %>%
+                        select(!!sym(group)) %>% unique #It is a tibble
+                    
+                    ncolors <- color_content[[1]] %>% length #length of group 
+                    color_input <- lapply(seq(ncolors), function (i){
+                        input[[paste0("colors",i)]]
+                    }) %>% unlist #calling input color by length of group 
+                    
+                    if(length(color_input) != ncolors) {
+                        p <- grouped_ggbetweenstats(mp_comp(),
+                                                    x = !!sym(group), 
+                                                    y = RelAbundanceBySample, 
+                                                    grouping.var = label, 
+                                                    type = "robust")
+                        
+                    }else{
+                        p <- grouped_ggbetweenstats(mp_comp(),
+                                                    x = !!sym(group), 
+                                                    y = RelAbundanceBySample, 
+                                                    grouping.var = label, 
+                                                    type = "robust",
+                                                    ggplot.component = list(
+                                                        scale_color_manual(values = color_input)
+                                                    ))
+                    }
+                }
+                return(p)
             })
+          
+            
+            #Modify color
+            color_list <- reactive({
+                req(mp_comp())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                pal <- pattle_drak2(length(name_colors)) #calling color palette:"pattle_drak2"
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
+            })
+            
+            output$plot <- renderPlot({
+                req(inherits(p_single_bacteria(), "ggplot"))
+                p_single_bacteria()
+            })
+            
+            output$color <- renderUI(
+                #req(color_list)
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){
                     paste("feature_composition", input$extPlot, sep='')},
                 content = function(file){
-                    req(mp_abu())
+                    req(mp_comp())
                     ggsave(file, 
-                           plot = mp_abu(), 
+                           plot = mp_comp(), 
                            width = input$width_slider, 
                            height = input$height_slider,
                            dpi = input$dpi)
@@ -444,8 +567,8 @@ feature_composition_mod <- function(id, mpse) {
             output$downloadTable <- downloadHandler(
                 filename = function(){ "feature_composition_Data.csv" },
                 content = function(file){
-                    req(mp_abu())
-                    table <- mp_abu()$data
+                    req(mp_comp())
+                    table <- mp_comp()$data
                     n <- names(table)[sapply(table, class) == "list"] 
                     write.csv(table %>% select(-c(n)), 
                               file,

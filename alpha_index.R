@@ -71,6 +71,11 @@ alpha_index_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -156,6 +161,7 @@ alpha_index_mod <- function(id, mpse) {
                     tidyr::pivot_longer(
                         cols = !!index,
                         names_to = "Alpha")
+               
                 if (is.numeric(tbl[[group]]) && type == "continuous") {
                     p <- grouped_ggscatterstats(tbl, 
                                                 x = !!sym(group), 
@@ -165,21 +171,75 @@ alpha_index_mod <- function(id, mpse) {
                                                 results.subtitle =FALSE,
                                                 centrality.plotting = FALSE)
                 } else {
-                    p <- grouped_ggbetweenstats(tbl, 
-                                                x = !!sym(group), 
-                                                y = value, 
-                                                grouping.var = Alpha, 
-                                                type = test,
-                                                results.subtitle =FALSE,
-                                                centrality.plotting = FALSE)
+                    color_content <- mpse %>% mp_extract_sample %>%
+                        select(!!sym(group)) %>% unique #It is a tibble
+                    
+                    ncolors <- color_content[[1]] %>% length #length of group 
+                    color_input <- lapply(seq(ncolors), function (i){
+                        input[[paste0("colors",i)]]
+                    }) %>% unlist #calling input color by length of group 
+                    
+                    if(length(color_input) != ncolors) {
+                        p <- grouped_ggbetweenstats(tbl, 
+                                                    x = !!sym(group), 
+                                                    y = value, 
+                                                    grouping.var = Alpha, 
+                                                    type = test,
+                                                    results.subtitle =FALSE,
+                                                    centrality.plotting = FALSE)
+
+                    }else{
+                        p <- grouped_ggbetweenstats(tbl, 
+                                                    x = !!sym(group), 
+                                                    y = value, 
+                                                    grouping.var = Alpha, 
+                                                    type = test,
+                                                    results.subtitle =FALSE,
+                                                    centrality.plotting = FALSE,
+                                                    ggplot.component = list(
+                                                        scale_color_manual(values = color_input)
+                                                    ))
+                    }
                 }
                 return(p)
+            })
+            
+            #Modify color
+            color_list <- reactive({
+                req(mp_alpha())
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                pal <- pattle_drak2(length(name_colors)) #calling color palette:"pattle_drak2"
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$alpha_index_plot <- renderPlot({
                 req(p_alpha_index())
                 p_alpha_index()
             })
+            
+            output$color <- renderUI(
+                #req(color_list)
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){

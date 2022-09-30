@@ -78,4 +78,4 @@ cc <- function(length) {
 }
 
 cols2 <- colorRampPalette(RColorBrewer::brewer.pal(8,"Set2"))
-
+pattle_drak2 <- colorRampPalette(RColorBrewer::brewer.pal(7,"Dark2"))
