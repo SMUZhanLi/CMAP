@@ -45,7 +45,8 @@ upload_data_ui <- function(id) {
                                verbatimTextOutput(ns("mp_print"))
                            )
                        )
-                   ))
+                   )
+            )
         )
         
     )
@@ -165,6 +166,10 @@ upload_data_mod <- function(id) {
       
       output$mp_print <- renderPrint({
           mpse() %>%  as_tibble
+          # mpse() %>% 
+          #     mp_stat_taxa(action = "add") %>% 
+          #     select(!StatTaxaInfo) %>% 
+          #     arrange(desc(Abundance)) %>% as_tibble
       })
       
       # output$mp_print <- renderPrint({

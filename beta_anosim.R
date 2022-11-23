@@ -68,6 +68,11 @@ beta_anosim_ui <- function(id) {
                                   downloadButton(ns("downloadPlot"), "Download Plot")),
                            column(width = 6,
                                   downloadButton(ns("downloadTable"), "Download Table"))
+                       ),
+                       h4("Color Palette"),
+                       fluidRow(
+                           column(6,
+                                  uiOutput(ns("color")))
                        )
                    )
             ),
@@ -191,63 +196,93 @@ beta_anosim_mod <- function(id, mpse) {
             #     paste0(anosim_res()$verbose, collapse = " ")
             # })
             
-            p_anosim <- eventReactive(input$btn, {
+            p_anosim <- reactive({
                 req(inherits(anosim_res()$tbl, "tbl"))
                 #req(input$submit)
-                plt <-  ggbetweenstats(
-                    data = anosim_res()$tbl,
-                    x = class,
-                    y = rank,
-                    bf.message = FALSE,
-                    results.subtitle = FALSE,
-                    plot.type = "box",
-                    ylab = "Bray-Curtis Rank",
-                    xlab = input$group,
-                    title = "Bray-Curtis Anosim",
-                    subtitle = paste0(anosim_res()$verbose[1:2], collapse = " "),
-                    centrality.plotting = FALSE
-                ) + 
-                    theme(
-                        text = element_text(
-                            #family = "Roboto", 
-                            size = 8, 
-                            color = "black"),
-                        plot.title = element_text(
-                            #family = "Lobster Two", 
-                            size = 20,
-                            face = "bold",
-                            color = "#2a475e"
-                        ),
-                        # Statistical annotations below the main title
-                        plot.subtitle = element_text(
-                            #family = "Roboto", 
-                            size = 12, 
-                            face = "bold",
-                            color="#1b2838"
-                        ),
-                        plot.title.position = "plot",# slightly different from default
-                        axis.text = element_text(size = 10, color = "black"),
-                        axis.title = element_text(size = 12),
-                        axis.ticks = element_blank(),
-                        axis.line = element_line(colour = "grey50"),
-                        panel.grid = element_line(color = "#b4aea9"),
-                        panel.grid.minor = element_blank(),
-                        panel.grid.major.x = element_blank(),
-                        panel.grid.major.y = element_line(linetype = "dashed"),
-                        # panel.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4"),
-                        # plot.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4")
-                    )
+                group <- isolate({input$group})
+                
+                if (is.numeric(anosim_res()$tbl[[group]]) && type == "continuous") {
+                    stop("Does not apply to continuous variables")
+                } else {
+                    color_content <- mpse %>% mp_extract_sample %>%
+                        select(!!sym(group)) %>% unique #It is a tibble
+                    
+                    ncolors <- (color_content[[1]] %>% length) + 1 #length of group + between
+                    color_input <- lapply(seq(ncolors), function (i){
+                        input[[paste0("colors",i)]]
+                    }) %>% unlist #calling input color by length of group 
+                    
+                    if(length(color_input) != ncolors) {
+                        plt <-  ggbetweenstats(
+                            data = anosim_res()$tbl,
+                            x = class,
+                            y = rank,
+                            bf.message = FALSE,
+                            results.subtitle = FALSE,
+                            plot.type = "box",
+                            ylab = "Bray-Curtis Rank",
+                            xlab = input$group,
+                            title = "Bray-Curtis Anosim",
+                            subtitle = paste0(anosim_res()$verbose[1:2], collapse = " "),
+                            centrality.plotting = FALSE
+                        ) + anosim_theme
+                    }else{
+                        plt <-  ggbetweenstats(
+                            data = anosim_res()$tbl,
+                            x = class,
+                            y = rank,
+                            bf.message = FALSE,
+                            results.subtitle = FALSE,
+                            plot.type = "box",
+                            ylab = "Bray-Curtis Rank",
+                            xlab = input$group,
+                            title = "Bray-Curtis Anosim",
+                            subtitle = paste0(anosim_res()$verbose[1:2], collapse = " "),
+                            centrality.plotting = FALSE,
+                            ggplot.component = list(
+                                scale_color_manual(values = color_input)
+                        )) + anosim_theme
+                    }
+                }
                 return(plt)
-                # anosim_res()$tbl %>%
-                #     ggplot(aes(x = class, y = rank, fill = class)) +
-                #     geom_boxplot(notch = TRUE, varwidth = TRUE) +
-                #     cmap_theme
+            })
+            
+            #Modify color
+            color_list <- reactive({
+                req(inherits(anosim_res()$tbl, "tbl"))
+                input$btn
+                group <- isolate({
+                    input$group
+                })
+                ns <- NS(id)
+                color_content <- mpse %>% mp_extract_sample %>% 
+                    select(!!sym(group)) %>% unique #It is a tibble
+                name_colors <- color_content[[1]] %>% sort #getting chr.
+                name_colors <- c("Between",name_colors) 
+                pal <- pattle_drak2(length(name_colors)) #calling color palette:"pattle_drak2"
+                names(pal) <- name_colors #mapping names to colors 
+                
+                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                    colorPickr(
+                        inputId = ns(paste0("colors",i)),
+                        label = names(pal[i]),
+                        selected = pal[[i]],
+                        swatches = cols,
+                        theme = "monolith",
+                        useAsButton = TRUE
+                    )
+                })
+                return(picks)
             })
             
             output$anosim_plot <- renderPlot({
                 req(p_anosim())
                 p_anosim()
             })
+            
+            output$color <- renderUI(
+                color_list()
+            )
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){

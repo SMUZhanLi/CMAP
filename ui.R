@@ -13,7 +13,7 @@ source("taxa-diff-analysis.R")
 source("taxa_diff_tree.R")
 source("maaslin.R")
 source("analysis-overview.R")
-source("data_summary.R")
+source("data_rarefying.R")
 
 header <- dashboardHeader(disable = T)
 
@@ -28,8 +28,8 @@ sidebar <- dashboardSidebar(
         menuItem(
             text = "分析前准备",
             menuSubItem("数据上传", tabName = "upload"),
-            menuSubItem("数据总览", tabName = "summary"),
-            menuSubItem("数据筛选", tabName = "filter")
+            menuSubItem("数据抽平", tabName = "rarefy"),
+            menuSubItem("meta筛选", tabName = "filter")
         ),
         menuItem(
             "Alpha多样性分析",
@@ -84,8 +84,8 @@ body <- dashboardBody(
         tabItem("overview",  analysis_overview_ui()),
         tabItem("a_index", alpha_index_ui("a_index")),
         tabItem("rare_curve", rare_curve_ui("rare")),
-        tabItem("filter", filter_data_ui("filter")),
-        tabItem("summary", data_summary_ui("summary")),
+        tabItem("filter", filter_ui("filter")),
+        tabItem("rarefy", data_rarefy_ui("rarefy")),
         tabItem("upload", upload_data_ui("upload")),
         tabItem("pca", beta_pca_ui("pca")),
         tabItem("pcoa", beta_pcoa_ui("pcoa")),

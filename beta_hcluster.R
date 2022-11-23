@@ -245,7 +245,7 @@ beta_hcluster_mod <- function(id, mpse) {
                 
 
                 if(length(color_input) != ncolors) {
-                    p + 
+                    p <- p + 
                         scale_color_manual(values = cc(ncolors)) + 
                         scale_fill_manual(values = cols2(ntax))
                 }else{

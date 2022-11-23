@@ -46,6 +46,76 @@ beta_pca_ui <- function(id) {
                        title = "Setting Plot",
                        status = "warning",
                        collapsible = TRUE,
+                       
+                       prettyCheckbox(
+                           inputId = ns("btn_ellipse"),
+                           label = "Show ellipse",
+                           value = FALSE,
+                           status = "danger",
+                           shape = "curve"
+                       ),
+                       # fluidRow(
+                       #     column(width = 4,
+                       #            style=list("padding-right: 5px;"),
+                       #            prettyCheckbox(
+                       #                inputId = ns("btn_ellipse"),
+                       #                label = "show ellipse", 
+                       #                value = FALSE,
+                       #                status = "danger",
+                       #                shape = "curve"
+                       #            )
+                       #     ),
+                       #     column(width = 4,
+                       #            style=list("padding-left: 5px;"),
+                       #            prettyCheckbox(
+                       #                inputId = ns("btn_sidebox"),
+                       #                label = "Add side box", 
+                       #                value = FALSE,
+                       #                status = "danger",
+                       #                shape = "curve"
+                       #            )
+                       #     ),
+                       # 
+                       #     column(width = 4,
+                       #            style=list("padding-left: 5px;"),
+                       #            prettyCheckbox(
+                       #                inputId = ns("btn_density"),
+                       #                label = "Add side density", 
+                       #                value = FALSE,
+                       #                status = "danger",
+                       #                shape = "curve"
+                       #            )
+                       #     )
+                       # ),
+                       radioGroupButtons(
+                           inputId = ns("btn_side"),
+                           label = "Choose side chart",
+                           choices = c("none", 
+                                       "Side box", 
+                                       "Side density"),
+                           checkIcon = list(
+                               yes = tags$i(class = "fa fa-check-square", 
+                                            style = "color: steelblue"),
+                               no = tags$i(class = "fa fa-square-o", 
+                                           style = "color: steelblue"))
+                       ),
+                       fluidRow(
+                           column(6,
+                                  pickerInput(ns("size"), selected = 2,"Size:", NULL)
+                           ),
+                           column(6,
+                                  pickerInput(ns("alpha"), selected = 1, "Alpha:", NULL)
+                           )
+                       ),
+                       
+                       
+                       selectInput(inputId = ns('dim'),
+                                   label = 'dimension',
+                                   choices = c('PC1 and PC2' = "2",
+                                               "PC1 and PC3" = "3")
+                       ),
+
+                       #materialSwitch(ns("btn_adonis"), value = TRUE,label = "Adonis:",status = "primary"),
                        fluidRow(
                            column(width = 6,
                                   style=list("padding-right: 5px;"),
@@ -109,7 +179,18 @@ beta_pca_mod <- function(id, mpse) {
                     choices = group,
                     selected = tail(names(lev[lev == 2]), 1)
                 )
+                updatePickerInput(session, "size",
+                                  choices = c("none",group),
+                                  #selected = tail(names(lev[lev == 2]), 1,)
+                                  #selected = 2
+                )
+                updatePickerInput(session, "alpha",
+                                  choices = c("none",group),
+                                  #selected = tail(names(lev[lev == 2]), 1)
+                                  #selected = 1
+                )
             })
+            
             mp_pca <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$submit
@@ -120,6 +201,7 @@ beta_pca_mod <- function(id, mpse) {
                     mp_decostand(.abundance = Abundance, method = std) %>%
                     mp_cal_pca(.abundance = !!std, action = "add")
             })
+            
             p_PCA <- reactive({
                 req(inherits(mp_pca(), "MPSE"))
                 input$btn
@@ -127,20 +209,79 @@ beta_pca_mod <- function(id, mpse) {
                     input$group
                 })
                 
-                ellipse <- mpse %>%
-                    mp_extract_sample() %>%
-                    pull(!!group) %>%
-                    is.character()
-                
-                p <- mp_pca() %>%
-                    mp_plot_ord(
-                        .ord = pca,
-                        .group = !!sym(group),
-                        .color = !!sym(group),
-                        ellipse = FALSE
-                    ) +
-                    cmap_theme
-                
+                size <- input$size 
+                alpha <- input$alpha
+                side <- input$btn_side 
+                if(size == "none") size <- NULL
+                if(alpha == "none") alpha <- NULL
+
+                dim_PC <- input$dim %>% as.numeric
+                dim_PC <- c(1, dim_PC)
+                # ellipse <- mpse %>%
+                #     mp_extract_sample() %>%
+                #     pull(!!group) %>%
+                #     is.character()
+                if(side != "Side density") {
+                    #side <- input$btn_side 
+                    if (side == "none"){
+                        side <- NULL
+                    }
+                    p <- mp_pca() %>%
+                        mp_plot_ord(
+                            .ord = pca,
+                            .dim = dim_PC,
+                            .group = !!sym(group),
+                            .color = !!sym(group),
+                            .size = !!s(size),
+                            .alpha = !!s(alpha),
+                            ellipse = input$btn_ellipse,
+                            show.legend = FALSE,
+                            show.side = !is.null(side),
+                        ) +
+                        cmap_theme
+
+                }else{
+                    p <- mp_pca() %>%
+                        mp_plot_ord(
+                            .ord = pca,
+                            .dim = dim_PC,
+                            .group = !!sym(group),
+                            .color = !!sym(group),
+                            .size = !!s(size),
+                            .alpha = !!s(alpha),
+                            ellipse = input$btn_ellipse,
+                            show.legend = FALSE,
+                            show.side = FALSE,
+                        ) +
+                        cmap_theme
+                    
+                    #Get p data 
+                    pca_data <- p$data
+                    
+                    # Add density curves to y and x axis
+                    xdens <- 
+                        axis_canvas(p, axis = "x") + 
+                        geom_density(data = pca_data, 
+                                     aes(x = !!sym(names(pca_data)[2]), 
+                                         fill = !!sym(group), 
+                                         colour = !!sym(group)), 
+                                     alpha = 0.3)  
+                    
+                    ydens <-
+                        axis_canvas(p, axis = "y", coord_flip = TRUE) + 
+                        geom_density(data = pca_data, 
+                                     aes(x = !!sym(names(pca_data)[3]), 
+                                                          fill = !!sym(group), 
+                                                          colour = !!sym(group)), 
+                                     alpha = 0.3) +
+                        coord_flip()
+                    
+                    p <- p %>%
+                        insert_xaxis_grob(xdens, grid::unit(1, "in"), position = "top") %>%
+                        insert_yaxis_grob(ydens, grid::unit(1, "in"), position = "right") %>%
+                        ggdraw()
+                }
+
                 
                 color_content <- mpse %>% mp_extract_sample %>%
                     select(!!sym(group)) %>% unique #It is a tibble

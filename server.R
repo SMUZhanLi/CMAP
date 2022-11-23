@@ -1,10 +1,12 @@
 server <- function(input, output, session) {
     mpse <- upload_data_mod("upload")
-    data_summary_mod("summary", mpse)
-    mpse_filter <- filter_data_mod("filter", mpse())
+    #mpse_rarefy <- data_rarefy_mod("rarefy", mpse)
+    data_rarefy_mod("rarefy", mpse)
+    mpse_filter <- filter_mod("filter", mpse())
+    #mpse_filter <- filter_mod("filter", mpse_rarefy())
     observe({
       mpse_filter$mpse
-      alpha_index_mod("a_index", mpse_filter$mpse)
+      alpha_index_mod("a_index",mpse_filter$mpse)
       rare_curve_mod("rare", mpse_filter$mpse)
       beta_pca_mod("pca", mpse_filter$mpse)
       beta_pcoa_mod("pcoa", mpse_filter$mpse)

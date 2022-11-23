@@ -1,236 +1,139 @@
-Taxa_level <- c(
-                "Kingdom", "Phylum", "Class", "Order",
-                "Family", "Genus", "Species"
-            )
-error_info <- "Invalid operation: Attempt to delete all data"
-
-filter_data_ui <- function(id) {
+filter_ui <- function(id) {
     ns <- NS(id)
-    res <- div(
-        class = "tab-body",
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Feature filter",
-            status = "warning",
-            collapsible = TRUE,
-            fluidRow(
-                column(6,
-                       numericInput(ns("abun"),
-                                    "Minimum counts of features:",
-                                    value = 1
-                       )),
-                column(6,
-                       numericInput(ns("prop"),
-                                    "Prevalence in samples (%):",
-                                    value = 5,
-                                    max = 100,
-                                    min = 0
-                       ))
+   # res <- div(
+        fluidPage(
+        #tags$h2("Filter data.frame"),
+        #actionButton(ns("saveFilterButton"),"Save Filter Values"),
+        # radioButtons(
+        #     inputId = ns("dataset"),
+        #     label = "Data:",
+        #     choices = c(
+        #         "metaData",
+        #         "Taxonomy"
+        #     ),
+        #     inline = TRUE
+        # ),
+        
+        fluidRow(
+            column(
+                width = 3,
+                shinydashboardPlus::box(
+                    width = NULL,
+                    title = "Filter meta data",
+                    status = "primary",
+                    collapsible = TRUE,
+                    #actionButton(ns("saveFilterButton"),"Save Filter Values", icon = icon("fa-regular fa-pen-to-square")),
+                    #br(),
+                    datamods::filter_data_ui(ns("mp_filter"))
+                    )
             ),
-            radioButtons(ns("rarefying"), "Data rarefying",
-                c(
-                    "Minimum" = "min",
-                    "Default" = "default",
-                    "Do not" = "no"
-                ),
-                inline = T
-            ),
-            conditionalPanel(
-                "input.rarefying == 'default'",
-                ns = ns,
-                numericInput(ns("default"),
-                    "Default size:",
-                    value = 0
-                )
-            ),
-            fluidRow(),
-            actionButton(ns("feature"), "Submit")
-        ),
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Taxonomy filter",
-            status = "warning",
-            collapsible = TRUE,
-            lapply(
-                Taxa_level,
-                function(i) {
-                    pickerInput(ns(tolower(i)), paste0(i, ":"), NULL, multiple = T, options = list(width = "275px"))
-                }
-            ),
-            fluidRow(),
-            actionButton(ns("taxonomy"), "Submit")
-        ),
-        shinydashboardPlus::box(
-            width = 12,
-            title = "Sample filter",
-            status = "warning",
-            collapsible = TRUE,
-            pickerInput(ns("group"), "Group:", NULL),
-            uiOutput(ns("ui")),
-            fluidRow(),
-            actionButton(ns("sample"), "Submit")
+            column(
+                width = 9,
+                # shinyWidgets::progressBar(
+                #     id = ns("pbar"), value = 100,
+                #     total = 100, display_pct = TRUE
+                # ),
+
+                tags$h4("Preview Filter:"),
+                #DTOutput(ns("table")),
+                reactable::reactableOutput(outputId = ns("table")),
+                br(),
+                actionButton(ns("saveFilterButton"),
+                             "Save Filter Values", 
+                             icon = icon("fa-regular fa-pen-to-square"),
+                             class = "btn-primary"),
+                br(),
+                tags$h4("Filtered data:"),
+                verbatimTextOutput(outputId = ns("res_str"))
+                # tags$b("mpse"),
+                # verbatimTextOutput(outputId = ns("mpse"))
+            )
         )
-    )
-    return(res)
+
+     )
+    #)
+    #return(res)
 }
 
-
-
-filter_data_mod <- function(id, mpse) {
+filter_mod <- function(id, mpse) {
     moduleServer(
         id,
         function(input, output, session) {
             ns <- session$ns
+            
             mpse_filter <- reactiveValues(mpse = NULL)
+            #savedFilterValues <- reactiveVal()
+            
             observe({
                 req(inherits(mpse, "MPSE"))
-                mpse_filter$mpse <- mpse
+                #req(any(mpse@assays %>% names %in% "RareAbundance"))
+                mpse_filter$mpse <<- mpse
+                #print("here!!")
+                #print(mpse@assays %>% names())
+                #print(mpse_filter$mpse %>% class)
             })
-            observe({
-                req(inherits(mpse_filter$mpse, "MPSE"))
-                mpse_filter$mpse
-                sampleda <- mp_extract_sample(mpse_filter$mpse)
-                group <- names(sampleda)
-                subtext <- sapply(sampleda, function(n) {
-                    paste0("<", class(n), ">", " ", length(unique(n)))
-                })
-                taxda <- lapply(mp_extract_taxonomy(mpse_filter$mpse)[, -1], unique)
-                updatePickerInput(session, "kingdom", choices = taxda[[1]])
-                updatePickerInput(session, "phylum", choices = taxda[[2]])
-                updatePickerInput(session, "class", choices = taxda[[3]])
-                updatePickerInput(session, "order", choices = taxda[[4]])
-                updatePickerInput(session, "family", choices = taxda[[5]])
-                updatePickerInput(session, "genus", choices = taxda[[6]])
-                updatePickerInput(session, "species", choices = taxda[[7]])
-                updatePickerInput(session, "group", choices = group, choicesOpt = list(subtext = subtext))
-            })
-            output$ui <- renderUI({
-                req(input$group)
-                multiInput(
-                    inputId = ns("sub"),
-                    label = NULL,
-                    choices = unique(mp_extract_sample(mpse_filter$mpse)[[input$group]]),
-                    options = list(
-                        enable_search = FALSE,
-                        non_selected_header = "Choose between:",
-                        selected_header = "Remove:"
-                    ),
-                    width = "100%"
-                )
-            })
-            observeEvent(input$feature, {
-                req(inherits(mpse_filter$mpse, "MPSE"))
-                input$feature
-                abun <- isolate({input$abun})
-                prop <- isolate({input$prop})
-                res <- tryCatch(
-                    mpse_filter$mpse %>%
-                    mp_filter_taxa(.abundance = Abundance, abun, prop, TRUE),
-                    error = function(e) e
-                )
-                if (inherits(res, "MPSE")) {
-                    mpse_filter$mpse  <- res
-                } else {
-                    showNotification(error_info, type = "warning")
-                }
 
-                # print(mpse_filter$mpse)
+            observe({
+                    req(inherits(mpse, "MPSE"))
+                    #req(any(mpse@assays %>% names() %in% "RareAbundance"))
+                    #print("here!!2")
+                    #print(mpse@assays %>% names())
+                    metaData <- mp_extract_sample(mpse)
+                    #Taxonomy <- (mpse %>% mp_extract_taxonomy)[, -1]
+                    data <- reactive({
+                        #data <- get(input$dataset)
+                        metaData
+                    })
+                    
+                    res_filter <- filter_data_server(
+                        id = "mp_filter",
+                        data = data,
+                        name = reactive("metaData"),
+                        defaults = reactive(NULL),
+                        widget_char = "picker",
+                        drop_ids = FALSE,
+                        vars = reactive(NULL)
+                    )
+                    
+                    mpse_filter$values <<- res_filter$values
+                    mpse_filter$filtered <<- res_filter$filtered
+
+                })
+            
+            observeEvent(input$saveFilterButton,{
+                mpse_filter$mpse <<- mpse %>%
+                    filter(Sample %in% (mpse_filter$filtered())[["Sample"]])
+                data_check <- mpse_filter$values()
+                
+                output$res_str <- renderPrint({
+                    str(data_check)
+                })
+                
+                # output$mpse <- renderPrint({
+                #     mpse_filter$mpse
+                # })
+                
             })
-            observeEvent(input$sample, {
-                req(inherits(mpse_filter$mpse, "MPSE"))
-                input$sample
-                group <- isolate({input$group})
-                sub <- isolate({input$sub})
-                res <- tryCatch(
-                    mpse_filter$mpse %>%
-                    filter(!(!!sym(group) %in% sub)), 
-                    error = function(e) e
-                )
-                if (inherits(res, "MPSE")) {
-                    mpse_filter$mpse  <- res
-                } else {
-                    showNotification(error_info, type = "warning")
-                }
-                # print(mpse_filter$mpse)
+
+            observeEvent(mpse_filter$filtered, {
+                
+                #output$table <- renderDT(mpse_filter$filtered())
+                output$table <- reactable::renderReactable({
+                    reactable::reactable(mpse_filter$filtered())
+                })
+                
             })
-            observeEvent(input$taxonomy, {
-                req(inherits(mpse_filter$mpse, "MPSE"))
-                input$taxonomy
-                kingdom <- isolate({
-                    if (is.null(input$kingdom)) {
-                        ""
-                    } else {
-                        input$kingdom
-                    }
-                    
-                })
-                phylum <- isolate({
-                    if (is.null(input$phylum)) {
-                        ""
-                    } else {
-                        input$phylum
-                    }
-                    
-                })
-                class <- isolate({
-                    if (is.null(input$class)) {
-                        ""
-                    } else {
-                        input$class
-                    }
-                    
-                })
-                order <- isolate({
-                    if (is.null(input$order)) {
-                        ""
-                    } else {
-                        input$order
-                    }
-                    
-                })
-                family <- isolate({
-                    if (is.null(input$family)) {
-                        ""
-                    } else {
-                        input$family
-                    }
-                })
-                genus <- isolate({
-                    if (is.null(input$genus)) {
-                        ""
-                    } else {
-                        input$genus
-                    }
-                })
-                species <- isolate({
-                    if (is.null(input$species)) {
-                        ""
-                    } else {
-                        input$species
-                    }
-                })
-                taxa <- mp_extract_taxonomy(mpse_filter$mpse) %>% names()
-                res <- tryCatch(
-                    mpse_filter$mpse %>%
-                    filter(
-                        !(!!sym(taxa[2]) %in% kingdom) &
-                        !(!!sym(taxa[3]) %in% phylum) &
-                        !(!!sym(taxa[4]) %in% class) &
-                        !(!!sym(taxa[5]) %in% order) &
-                        !(!!sym(taxa[6]) %in% family) &
-                        !(!!sym(taxa[7]) %in% genus) &
-                        !(!!sym(taxa[8]) %in% species)
-                    ), error = function(e) e
-                )
-                if (inherits(res, "MPSE")) {
-                    mpse_filter$mpse  <- res
-                } else {
-                    showNotification(error_info, type = "warning")
-                }
-            })
+
+            
+            # observeEvent(mpse_filter$filtered, {
+            #     updateProgressBar(
+            #         session = session, id = ns("pbar"),
+            #         value = nrow(mpse_filter$filtered), total = nrow(metaData)
+            #     )
+            # })
+
             return(mpse_filter)
-        }
-    )
+        })
 }
 
 

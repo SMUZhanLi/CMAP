@@ -2,79 +2,302 @@ maaslin_ui <- function(id) {
     ns <- NS(id)
     res <- div(
         class = "maaslin-body",
-        shinydashboardPlus::box(
-            width = 12, title = "Maaslin2 Analysis",
-            status = "warning",
-            collapsible = TRUE,
-            column(
-                width = 5, class = "maaslin2",
-            numericInput(
-                ns("min_abundance"),
-                "Min abundance:",
-                min = 0,
-                max = 1,
-                value = 0
-            ),
-            numericInput(
-                ns("min_prevalence"),
-                "Min prevalence:",
-                value = 0.1
-            ),
-            numericInput(
-                ns("min_variance"),
-                "Min variance:",
-                value = 0.0
-            ),
-            numericInput(
-                ns("max_significance"),
-                "Q-value cutoff:",
-                value = 0.25
-            ),
-            numericInput(
-                ns("topn"),
-                "Top features",
-                min = 1,
-                value = 50,
-                step = 1
-            ),
-            pickerInput(
-                ns("level"),
-                "Taxonomic level:",
-                choices = NULL
-            ),
-            pickerInput(
-                ns("method"),
-                "Analysis method:",
-                c("LM", "CPLM", "NEGBIN", "ZINB")
-            ),
-            pickerInput(
-                ns("standardize"),
-                "Standardize(or not):",
-                choices = c("TRUE", "FALSE")
-            ),
-            pickerInput(
-                ns("normalization"),
-                label = "Normalization method:",
-                choices = c("TSS", "CLR", "CSS", "NONE", "TMM"),
-                selected = "NONE"
-            ),
-            pickerInput(
-                ns("transform"),
-                label = "Transform method:",
-                choices = c("LOG", "LOGIT", "AST", "NONE"),
-                selected = "AST"
+        fluidRow(
+            column(3,
+                   shinydashboardPlus::box(
+                       width = 12, title = "Maaslin2 Analysis",
+                       status = "warning",
+                       collapsible = TRUE,
+                       # column(
+                       #     width = 5, class = "maaslin2",
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  numericInput(
+                                      ns("min_abundance"),
+                                      "Min abundance:",
+                                      min = 0,
+                                      max = 1,
+                                      value = 0
+                                  )
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(
+                                      ns("min_prevalence"),
+                                      "Min prevalence:",
+                                      value = 0.1
+                                  )
+                           )
+                       ),
+                       
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  numericInput(
+                                      ns("min_variance"),
+                                      "Min variance:",
+                                      value = 0.0
+                                  )
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  numericInput(
+                                      ns("max_significance"),
+                                      "Q-value cutoff:",
+                                      value = 0.25
+                                  )
+                           )
+                       ),
+                       
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  numericInput(
+                                      ns("topn"),
+                                      "Top features",
+                                      min = 1,
+                                      value = 50,
+                                      step = 1
+                                  )
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  pickerInput(
+                                      ns("level"),
+                                      "Taxonomic level:",
+                                      choices = NULL
+                                  )
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  pickerInput(
+                                      ns("method"),
+                                      "Analysis method:",
+                                      c("LM", "CPLM", "NEGBIN", "ZINB")
+                                  )
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  pickerInput(
+                                      ns("standardize"),
+                                      "Standardize(or not):",
+                                      choices = c("TRUE", "FALSE")
+                                  )
+                           )
+                       ),
+                       fluidRow(
+                           column(width = 6,
+                                  style=list("padding-right: 5px;"),
+                                  pickerInput(
+                                      ns("normalization"),
+                                      label = "Normalization method:",
+                                      choices = c("TSS", "CLR", "CSS", "NONE", "TMM"),
+                                      selected = "NONE"
+                                  )
+                           ),
+                           column(width = 6,
+                                  style=list("padding-left: 5px;"),
+                                  pickerInput(
+                                      ns("transform"),
+                                      label = "Transform method:",
+                                      choices = c("LOG", "LOGIT", "AST", "NONE"),
+                                      selected = "AST"
+                                  )
+                           )
+                       ),
+                       actionButton(ns("btn"), "Submit")
+
+                   )
+                   ),
+            column(9,
+                   tri_select_input_ui("maaslin", NULL)
             )
-            ),
-            column(
-                width = 7,
-                div(
-                    style = "margin-top: 25px",
-                    tri_select_input_ui("maaslin", NULL)
-                )
-            ),
-            fluidRow(),
-            actionButton(ns("btn"), "Submit")
         ),
+        jqui_resizable(
+            plotOutput(ns("plot"), width = "800px"),
+            operation = c("enable", "disable", "destroy", "save", "load"),
+            options = list(
+                minHeight = 100, maxHeight = 900,
+                minWidth = 300, maxWidth = 1200
+            )
+        )
+        #)
+
+
+        # shinydashboardPlus::box(
+        #     width = 12, title = "Maaslin2 Analysis",
+        #     status = "warning",
+        #     collapsible = TRUE,
+        #     # column(
+        #     #     width = 5, class = "maaslin2",
+        #         fluidRow(
+        #             column(width = 6,
+        #                    style=list("padding-right: 5px;"),
+        #                    numericInput(
+        #                        ns("min_abundance"),
+        #                        "Min abundance:",
+        #                        min = 0,
+        #                        max = 1,
+        #                        value = 0
+        #                    )
+        #             ),
+        #             column(width = 6,
+        #                    style=list("padding-left: 5px;"),
+        #                    numericInput(
+        #                        ns("min_prevalence"),
+        #                        "Min prevalence:",
+        #                        value = 0.1
+        #                    )
+        #             )
+        #         ),
+        #         
+        #         fluidRow(
+        #             column(width = 6,
+        #                    style=list("padding-right: 5px;"),
+        #                    numericInput(
+        #                        ns("min_variance"),
+        #                        "Min variance:",
+        #                        value = 0.0
+        #                    )
+        #             ),
+        #             column(width = 6,
+        #                    style=list("padding-left: 5px;"),
+        #                    numericInput(
+        #                        ns("max_significance"),
+        #                        "Q-value cutoff:",
+        #                        value = 0.25
+        #                    )
+        #             )
+        #         ),
+        #         
+        #         fluidRow(
+        #             column(width = 6,
+        #                    style=list("padding-right: 5px;"),
+        #                    numericInput(
+        #                        ns("topn"),
+        #                        "Top features",
+        #                        min = 1,
+        #                        value = 50,
+        #                        step = 1
+        #                    )
+        #             ),
+        #             column(width = 6,
+        #                    style=list("padding-left: 5px;"),
+        #                    pickerInput(
+        #                        ns("level"),
+        #                        "Taxonomic level:",
+        #                        choices = NULL
+        #                    )
+        #             )
+        #         ),
+        #         fluidRow(
+        #             column(width = 6,
+        #                    style=list("padding-right: 5px;"),
+        #                    pickerInput(
+        #                        ns("method"),
+        #                        "Analysis method:",
+        #                        c("LM", "CPLM", "NEGBIN", "ZINB")
+        #                    )
+        #             ),
+        #             column(width = 6,
+        #                    style=list("padding-left: 5px;"),
+        #                    pickerInput(
+        #                        ns("standardize"),
+        #                        "Standardize(or not):",
+        #                        choices = c("TRUE", "FALSE")
+        #                    )
+        #             )
+        #         ),
+        #         fluidRow(
+        #             column(width = 6,
+        #                    style=list("padding-right: 5px;"),
+        #                    pickerInput(
+        #                        ns("normalization"),
+        #                        label = "Normalization method:",
+        #                        choices = c("TSS", "CLR", "CSS", "NONE", "TMM"),
+        #                        selected = "NONE"
+        #                    )
+        #             ),
+        #             column(width = 6,
+        #                    style=list("padding-left: 5px;"),
+        #                    pickerInput(
+        #                        ns("transform"),
+        #                        label = "Transform method:",
+        #                        choices = c("LOG", "LOGIT", "AST", "NONE"),
+        #                        selected = "AST"
+        #                    )
+        #             )
+        #         )
+        #     # numericInput(
+        #     #     ns("min_abundance"),
+        #     #     "Min abundance:",
+        #     #     min = 0,
+        #     #     max = 1,
+        #     #     value = 0
+        #     # ),
+        #     # numericInput(
+        #     #     ns("min_prevalence"),
+        #     #     "Min prevalence:",
+        #     #     value = 0.1
+        #     # ),
+        #     # numericInput(
+        #     #     ns("min_variance"),
+        #     #     "Min variance:",
+        #     #     value = 0.0
+        #     # ),
+        #     # numericInput(
+        #     #     ns("max_significance"),
+        #     #     "Q-value cutoff:",
+        #     #     value = 0.25
+        #     # ),
+        #     # numericInput(
+        #     #     ns("topn"),
+        #     #     "Top features",
+        #     #     min = 1,
+        #     #     value = 50,
+        #     #     step = 1
+        #     # ),
+        #     # pickerInput(
+        #     #     ns("level"),
+        #     #     "Taxonomic level:",
+        #     #     choices = NULL
+        #     # ),
+        #     # pickerInput(
+        #     #     ns("method"),
+        #     #     "Analysis method:",
+        #     #     c("LM", "CPLM", "NEGBIN", "ZINB")
+        #     # ),
+        #     # pickerInput(
+        #     #     ns("standardize"),
+        #     #     "Standardize(or not):",
+        #     #     choices = c("TRUE", "FALSE")
+        #     # ),
+        #     # pickerInput(
+        #     #     ns("normalization"),
+        #     #     label = "Normalization method:",
+        #     #     choices = c("TSS", "CLR", "CSS", "NONE", "TMM"),
+        #     #     selected = "NONE"
+        #     # ),
+        #     # pickerInput(
+        #     #     ns("transform"),
+        #     #     label = "Transform method:",
+        #     #     choices = c("LOG", "LOGIT", "AST", "NONE"),
+        #     #     selected = "AST"
+        #     # )
+        #     #),
+        #     # column(
+        #     #     width = 7,
+        #         div(
+        #             style = "margin-top: 25px",
+        #             tri_select_input_ui("maaslin", NULL)
+        #         )
+        #     #),
+        #     fluidRow(),
+        #     actionButton(ns("btn"), "Submit")
+        # ),
         # shinydashboardPlus::box(
         #     width = 12,
         #     title = "Plot Download",
@@ -91,16 +314,16 @@ maaslin_ui <- function(id) {
         #     downloadButton(ns("downloadPlot"), "Download Plot"),
         #     downloadButton(ns("downloadTable"), "Download Table")
         # ),
-        fluidRow(),
-        jqui_resizable(
-            plotOutput(ns("plot"), width = "800px"),
-            operation = c("enable", "disable", "destroy", "save", "load"),
-            options = list(
-                minHeight = 100, maxHeight = 900,
-                minWidth = 300, maxWidth = 1200
-            )
-        ),
-        DTOutput(ns("tbl"), width = "500px", height = "400px")
+        # fluidRow(),
+        # jqui_resizable(
+        #     plotOutput(ns("plot"), width = "800px"),
+        #     operation = c("enable", "disable", "destroy", "save", "load"),
+        #     options = list(
+        #         minHeight = 100, maxHeight = 900,
+        #         minWidth = 300, maxWidth = 1200
+        #     )
+        # ),
+        #DTOutput(ns("tbl"), width = "500px", height = "400px")
     )
 }
 
