@@ -100,7 +100,7 @@ calm_upload_biom <- function(BIOMfilename, mapfilename, otutree = NULL) {
 
 
 cols <- toupper(c(
-    "#bebada","#fb8072","#80b1d3","#fdb462","#b3de69","#fccde5","#FDBF6F","#A6CEE3",
+    "#fb8072","#80b1d3","#bebada","#fdb462","#b3de69","#fccde5","#FDBF6F","#A6CEE3",
     "#56B4E9","#B2DF8A","#FB9A99","#CAB2D6","#A9C4E2","#79C360","#FDB762","#9471B4",
     "#A4A4A4","#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#ffffcc","#e5d8bd",
     "#fddaec","#f2f2f2","#8dd3c7","#d9d9d9"))

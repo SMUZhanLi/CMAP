@@ -27,6 +27,10 @@ rare_curve_ui <- function(id) {
                        title = "Setting Plot",
                        status = "warning",
                        collapsible = TRUE,
+                       materialSwitch(ns("plot_group"), 
+                                      value = FALSE,
+                                      label = "Combine the samples",
+                                      status = "primary"),
                        fluidRow(
                            column(width = 6,
                                   style=list("padding-right: 5px;"),
@@ -147,7 +151,7 @@ rare_curve_mod <- function(id, mpse) {
                 # if (! inherits(res, "MPSE")) {
                     res <- mpse %>%
                         mp_cal_rarecurve(
-                            .abundance = Abundance,
+                            .abundance = RareAbundance,
                             chunks = 50,
                             action = "add",
                             force = T
@@ -161,9 +165,10 @@ rare_curve_mod <- function(id, mpse) {
                 group <- isolate({input$group})
                 index <- isolate({input$index})
                 p <- mp_rare() %>%
-                    mp_plot_rarecurve(.rare=AbundanceRarecurve,
+                    mp_plot_rarecurve(.rare=RareAbundanceRarecurve,
                                       .alpha=!!index,
-                                      .group=!!group) +
+                                      .group=!!group,
+                                      plot.group = input$plot_group) +
                     cmap_theme
                 if (group=="Sample") {
                     p <- p + theme(legend.position = "none")
@@ -183,10 +188,12 @@ rare_curve_mod <- function(id, mpse) {
                 
                 if(length(color_input) != ncolors) {
                     p <- p + 
-                        scale_color_manual(values = cc(ncolors))
+                        scale_color_manual(values = cc(ncolors)) +
+                        scale_fill_manual(values=cc(ncolors),guide="none")  
                 }else{
                     p <- p + 
-                        scale_color_manual(values = color_input) 
+                        scale_color_manual(values = color_input) +
+                        scale_fill_manual(values=color_input, guide="none") 
                 }
                 
                 
@@ -202,6 +209,7 @@ rare_curve_mod <- function(id, mpse) {
                     input$group
                 })
                 ns <- NS(id)
+                if(!is.numeric(mp_extract_sample(mpse)[[group]])){
                 color_content <- mpse %>% mp_extract_sample %>% 
                     select(!!sym(group)) %>% unique #It is a tibble
                 name_colors <- color_content[[1]] %>% sort #getting chr.
@@ -219,6 +227,7 @@ rare_curve_mod <- function(id, mpse) {
                     )
                 })
                 return(picks)
+                }
             })
             
             output$rare_curve_plot <- renderPlot({

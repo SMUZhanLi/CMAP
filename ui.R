@@ -14,6 +14,8 @@ source("taxa_diff_tree.R")
 source("maaslin.R")
 source("analysis-overview.R")
 source("data_rarefying.R")
+source("cca.R")
+source("rda.R")
 
 header <- dashboardHeader(disable = T)
 
@@ -41,7 +43,9 @@ sidebar <- dashboardSidebar(
             menuSubItem("PCA分析", tabName = "pca"),
             menuSubItem("PCoA分析", tabName = "pcoa"),
             menuSubItem("NMDS分析", tabName = "nmds"),
-            menuSubItem("Adonis分析", tabName = "adonis"),
+            menuSubItem("CCA分析", tabName = "cca"),
+            menuSubItem("RDA分析", tabName = "rda"),
+            #menuSubItem("Adonis分析", tabName = "adonis"),
             menuSubItem("Anosim分析", tabName = "anosim"),
             menuSubItem("样本层级聚类分析", tabName = "hcluster")
             
@@ -90,8 +94,10 @@ body <- dashboardBody(
         tabItem("pca", beta_pca_ui("pca")),
         tabItem("pcoa", beta_pcoa_ui("pcoa")),
         tabItem("nmds", beta_nmds_ui("nmds")),
+        tabItem("cca", cca_ui("cca")),
+        tabItem("rda", cca_ui("rda")),
         tabItem("hcluster", beta_hcluster_ui("hcluster")),
-        tabItem("adonis", beta_adonis_ui("adonis")),
+        #tabItem("adonis", beta_adonis_ui("adonis")),
         tabItem("anosim", beta_anosim_ui("anosim")),
         tabItem("taxa_diff", taxa_composition_ui("taxa_diff")),
         tabItem("feature_diff", feature_composition_ui("feature_diff")),

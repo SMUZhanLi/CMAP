@@ -43,6 +43,22 @@ alpha_index_ui <- function(id) {
                        title = "Setting Plot",
                        status = "warning",
                        collapsible = TRUE,
+                       materialSwitch(ns("subtitle"), 
+                                      value = FALSE,
+                                      label = "statistical tests results",
+                                      status = "primary"),
+                       radioGroupButtons(
+                           inputId = ns("box_style"),
+                           label = "Plot type",
+                           choices = c("box", 
+                                       "violin", 
+                                       "boxviolin"),
+                           checkIcon = list(
+                               yes = tags$i(class = "fa fa-check-square", 
+                                            style = "color: steelblue"),
+                               no = tags$i(class = "fa fa-square-o", 
+                                           style = "color: steelblue"))
+                           ),
                        fluidRow(
                            column(width = 6,
                                   style=list("padding-right: 5px;"),
@@ -162,7 +178,7 @@ alpha_index_mod <- function(id, mpse) {
                         cols = !!index,
                         names_to = "Alpha")
                
-                if (is.numeric(tbl[[group]]) && type == "continuous") {
+                if (is.numeric(tbl[[group]]) && type == "continuous") {#continuous vector don't call color pal.
                     p <- grouped_ggscatterstats(tbl, 
                                                 x = !!sym(group), 
                                                 y = value, 
@@ -183,22 +199,27 @@ alpha_index_mod <- function(id, mpse) {
                         p <- grouped_ggbetweenstats(tbl, 
                                                     x = !!sym(group), 
                                                     y = value, 
+                                                    plot.type = input$box_style, 
                                                     grouping.var = Alpha, 
                                                     type = test,
-                                                    results.subtitle =FALSE,
-                                                    centrality.plotting = FALSE)
-
+                                                    results.subtitle = input$subtitle,
+                                                    centrality.plotting = FALSE,
+                                                    pairwise.display = "s"
+                        )
                     }else{
                         p <- grouped_ggbetweenstats(tbl, 
                                                     x = !!sym(group), 
                                                     y = value, 
+                                                    plot.type = input$box_style,
                                                     grouping.var = Alpha, 
                                                     type = test,
-                                                    results.subtitle =FALSE,
+                                                    results.subtitle =input$subtitle,
                                                     centrality.plotting = FALSE,
+                                                    pairwise.display = "s",
                                                     ggplot.component = list(
                                                         scale_color_manual(values = color_input)
-                                                    ))
+                                                        )
+                                                    )
                     }
                 }
                 return(p)
@@ -208,27 +229,27 @@ alpha_index_mod <- function(id, mpse) {
             color_list <- reactive({
                 req(mp_alpha())
                 input$btn
-                group <- isolate({
-                    input$group
-                })
+                group <- isolate({input$group})
                 ns <- NS(id)
-                color_content <- mpse %>% mp_extract_sample %>% 
-                    select(!!sym(group)) %>% unique #It is a tibble
-                name_colors <- color_content[[1]] %>% sort #getting chr.
-                pal <- pattle_drak2(length(name_colors)) #calling color palette:"pattle_drak2"
-                names(pal) <- name_colors #mapping names to colors 
-                
-                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
-                    colorPickr(
-                        inputId = ns(paste0("colors",i)),
-                        label = names(pal[i]),
-                        selected = pal[[i]],
-                        swatches = cols,
-                        theme = "monolith",
-                        useAsButton = TRUE
-                    )
-                })
-                return(picks)
+                if(!is.numeric(mp_extract_sample(mpse)[[group]])){
+                    color_content <- mpse %>% mp_extract_sample %>% 
+                        select(!!sym(group)) %>% unique #It is a tibble
+                    name_colors <- color_content[[1]] %>% sort #getting chr.
+                    pal <- pattle_drak2(length(name_colors)) #calling color palette:"pattle_drak2"
+                    names(pal) <- name_colors #mapping names to colors 
+                    
+                    picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                        colorPickr(
+                            inputId = ns(paste0("colors",i)),
+                            label = names(pal[i]),
+                            selected = pal[[i]],
+                            swatches = cols,
+                            theme = "monolith",
+                            useAsButton = TRUE
+                        )
+                    })
+                    return(picks)
+                }
             })
             
             output$alpha_index_plot <- renderPlot({

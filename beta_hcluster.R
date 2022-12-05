@@ -42,66 +42,67 @@ beta_hcluster_ui <- function(id) {
                                pickerInput(ns("group"), "Group:", NULL)
                         )
                     ),
+                    fluidRow(
+                        column(width = 6,
+                               style=list("padding-right: 5px;"),
+                               pickerInput(ns("taxonomy"), "taxonomy:", NULL)
+                        ),
+                        column(width = 6,
+                               style=list("padding-left: 5px;"),
+                               numericInput(ns("topn"), "Abundance top N:", 15, 5, 50)
+                        )
+                    ),
+                   
                     actionButton(ns("btn"), "Submit")
                 ),
-                
-                shinydashboardPlus::box(
-                    width = NULL,
-                    title = "Setting Plot",
-                    status = "warning",
-                    collapsible = TRUE,
-                    # pickerInput(ns("layout"),
-                    #             "Graph type:",
-                    #             choices = hcl_layout,
-                    #             selected = "rectangular"
-                    # ),
-                    #h5("Colors Setting"),
-
-                    #h5("Plot Download"),
-                    fluidRow(
-                        column(width = 6,
-                               style=list("padding-right: 5px;"),
-                               numericInput(ns("width_slider"), "Width:", 10,1, 20)
-                        ),
-                        column(width = 6,
-                               style=list("padding-left: 5px;"),
-                               numericInput(ns("height_slider"), "Height:", 8, 1, 20)
-                        )
-                    ),
-                    fluidRow(
-                        column(width = 6,
-                               style=list("padding-right: 5px;"),
-                               selectInput(inputId = ns('extPlot'),
-                                           label = 'Output format',
-                                           choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
-                               ),
-                        ),
-                        column(width = 6,
-                               style=list("padding-left: 5px;"),
-                               numericInput(ns("dpi"), "DPI:", 300, 100, 600)
-                        )
-                    ),
-
-                    fluidRow(
-                        column(width = 6,
-                               downloadButton(ns("downloadPlot"), "Download Plot")),
-                        column(width = 6,
-                               downloadButton(ns("downloadTable"), "Download Table"))
-                    ),
-                    
-                    h4("Color Palette"),
-                    fluidRow(
-                        column(6,
-                               uiOutput(ns("color"))),
-                        column(6,
-                               uiOutput(ns("fill")))
-                    )
-                    #uiOutput(ns("color"))
+                tabBox(width = NULL,
+                       tabPanel(
+                           h5("Color"),
+                           fluidRow(
+                               column(6,
+                                      tags$b("Group color:"),
+                                      uiOutput(ns("color"))),
+                               column(6,
+                                      tags$b("Taxonomy color:"),
+                                      uiOutput(ns("fill")))
+                           )
+                       ),
+                       tabPanel(h5("Download"),
+                                fluidRow(
+                                    column(width = 6,
+                                           style=list("padding-right: 5px;"),
+                                           numericInput(ns("width_slider"), "Width:", 10,1, 20)
+                                    ),
+                                    column(width = 6,
+                                           style=list("padding-left: 5px;"),
+                                           numericInput(ns("height_slider"), "Height:", 8, 1, 20)
+                                    )
+                                ),
+                                fluidRow(
+                                    column(width = 6,
+                                           style=list("padding-right: 5px;"),
+                                           selectInput(inputId = ns('extPlot'),
+                                                       label = 'Output format',
+                                                       choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
+                                           ),
+                                    ),
+                                    column(width = 6,
+                                           style=list("padding-left: 5px;"),
+                                           numericInput(ns("dpi"), "DPI:", 300, 100, 600)
+                                    )
+                                ),
+                                fluidRow(
+                                    column(width = 6,
+                                           downloadButton(ns("downloadPlot"), "Download Plot")),
+                                    column(width = 6,
+                                           downloadButton(ns("downloadTable"), "Download Table"))
+                                )
+                       )
                 )
             ),
             column(width = 9,
                    jqui_resizable(
-                       plotOutput(ns("hcluster_plot"), width = '900px', height = '600px'),
+                       plotOutput(ns("hcluster_plot"), width = '450px', height = '600px'),
                        operation = c("enable", "disable", "destroy", "save", "load"),
                        options = list(
                            minHeight = 300, maxHeight = 900,
@@ -126,9 +127,14 @@ beta_hcluster_mod <- function(id, mpse) {
                 req(inherits(mpse, "MPSE"))
                 lev <- sapply(mp_extract_sample(mpse)[-1], function(n) length(unique(n)))
                 group <- names(lev[lev > 1])
+                tax <- mp_extract_taxonomy(mpse) %>% names()
                 updatePickerInput(session, "group",
                                   choices = group,
                                   selected = tail(names(lev[lev == 2]), 1)
+                )
+                updatePickerInput(session, "taxonomy",
+                                  choices = tax,
+                                  selected = tail(tax)
                 )
                 if (!is.null(treeda())) {
                     updatePickerInput(session, "dist_method",
@@ -158,7 +164,7 @@ beta_hcluster_mod <- function(id, mpse) {
                     mp_cal_clust(.abundance = !!std, distmethod = dist, action = "get") #note: action = "get", tree data
             })
             
-            phy.tb <- eventReactive(input$btn, {
+            tax.tb <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
                 input$submit
                 
@@ -166,7 +172,15 @@ beta_hcluster_mod <- function(id, mpse) {
                     input$group
                 })
                 
-                mpse %>%
+                taxonomy <- isolate({
+                    input$taxonomy
+                })
+                # topn <- isolate({
+                #     input$topn
+                # })
+                
+                
+                tb <- mpse %>%
                     mp_cal_abundance( # for each samples
                         .abundance = RareAbundance
                     )%>%
@@ -175,12 +189,16 @@ beta_hcluster_mod <- function(id, mpse) {
                         .group = group
                     ) %>% 
                     mp_extract_abundance(
-                        taxa.class = Phylum,
-                        topn = 30
+                        taxa.class = !!sym(taxonomy),
+                        topn = input$topn
                     ) %>%
-                    tidyr::unnest(cols = RareAbundanceBySample) %>%
-                    dplyr::rename(Phyla="label")
+                    tidyr::unnest(cols = RareAbundanceBySample) #%>%
+                    #dplyr::rename(!!sym(taxonomy) := "label")
                 
+                tb <- tb %>%  filter(label != "Others") %>%
+                    dplyr::rename(!!sym(taxonomy) := "label")
+                
+                return(tb)
             })
             
             
@@ -193,6 +211,9 @@ beta_hcluster_mod <- function(id, mpse) {
                 # layout <- isolate({
                 #     input$layout
                 # })
+                taxonomy <- isolate({
+                    input$taxonomy
+                })
                 dist <- isolate({
                     input$dist_method
                 })
@@ -201,34 +222,34 @@ beta_hcluster_mod <- function(id, mpse) {
                     geom_treescale(fontsize = 2) +
                     geom_tippoint(mapping=aes(color = !!sym(group))) +
                     geom_fruit(
-                        data = phy.tb(),
+                        data = tax.tb(),
                         geom = geom_col,
-                        mapping = aes(x = RelRareAbundanceBySample, y = Sample, fill = Phyla),
+                        mapping = aes(x = RelRareAbundanceBySample, y = Sample, fill = !!sym(taxonomy)),
                         orientation = "y",
                         offset = 0.08,
                         pwidth = 3,
-                        width = .6,
-                        axis.params = list(
-                            axis = "x",
-                            title = "The relative abundance of phyla (%)",
-                            title.size = 3,
-                            title.height = 0.04,
-                            text.size = 2,
-                            vjust = 1
-                        )
+                        width = .6
+                        # axis.params = list(
+                        #     axis = "x",
+                        #     #title = paste0("The relative abundance of ",taxonomy," (%)"),
+                        #     #title.size = 3,
+                        #     title.height = 0.04,
+                        #     text.size = 2,
+                        #     vjust = 1
+                        # )
                     ) +
                     geom_tiplab(as_ylab = TRUE) +
                     scale_x_continuous(expand = c(0, 0.01))
 
-              
+                #add color and fill
                 color_content <- mpse %>% mp_extract_sample %>%
-                    select(!!sym(group)) %>% unique #It is a tibble
+                    select(!!sym(group)) %>% unique #It is a tibble, "Group" content
 
-                taxonomy_content <- mpse %>% 
-                    mp_extract_taxonomy %>% 
-                    select(Phylum) %>% 
-                    unique()
-                
+                taxonomy_content <- mpse %>%
+                    mp_extract_taxonomy %>%
+                    select(!!sym(taxonomy)) %>%
+                    unique
+
                 if(color_content[[1]] %>% is.numeric) {
                     return(p)
                 }
@@ -237,26 +258,26 @@ beta_hcluster_mod <- function(id, mpse) {
                 color_input <- lapply(seq(ncolors), function (i){
                     input[[paste0("colors",i)]]
                 }) %>% unlist #calling input color
-                
+
                 ntax <- taxonomy_content[[1]] %>% length
                 fill_input <- lapply(seq(ntax), function (i){
                     input[[paste0("fill",i)]]
-                }) %>% unlist #calling input fill
-                
+                }) %>% unlist #calling fill cols from "fill_list"
 
-                if(length(color_input) != ncolors) {
-                    p <- p + 
-                        scale_color_manual(values = cc(ncolors)) + 
-                        scale_fill_manual(values = cols2(ntax))
-                }else{
-                    p <- p + 
+
+                # if(length(color_input) != ncolors) {
+                #     p <- p +
+                #         scale_color_manual(values = cc(ncolors)) +
+                #         scale_fill_manual(values = cols2(ntax))
+                # }else{
+                    p <- p +
                         scale_color_manual(values = color_input,
                                            guide = guide_legend(
                                                keywidth = .5,
                                                keyheight = .5,
                                                title.theme = element_text(size = 8),
                                                label.theme = element_text(size = 6)
-                                           )) + 
+                                           )) +
                         scale_fill_manual(values = fill_input,
                                           guide = guide_legend(
                                               keywidth = .5,
@@ -264,7 +285,7 @@ beta_hcluster_mod <- function(id, mpse) {
                                               title.theme = element_text(size = 8),
                                               label.theme = element_text(size = 6)
                                           ))
-                }
+                #}
 
                 return(p)
             })
@@ -304,6 +325,7 @@ beta_hcluster_mod <- function(id, mpse) {
                 group <- isolate({
                     input$group
                 })
+
                 ns <- NS(id)
                 color_content <- mpse %>% mp_extract_sample %>% 
                     select(!!sym(group)) %>% unique #It is a tibble
@@ -329,15 +351,19 @@ beta_hcluster_mod <- function(id, mpse) {
             fill_list <- reactive({
                 req(mp_hcl())
                 input$btn
-                
+                taxonomy <- isolate({
+                    input$taxonomy
+                })
                 taxonomy_content <- mpse %>% 
                     mp_extract_taxonomy %>% 
-                    select(Phylum) %>% 
-                    unique()
+                    select(!!sym(taxonomy)) %>% 
+                    unique
 
                # name_fills <- taxonomy_content[[1]] %>% sort #getting  chr.
-                name_fills <- phy.tb()$Phyla %>% levels
+                name_fills <- tax.tb() %>% select(!!sym(taxonomy))
+                name_fills <- name_fills[[1]] %>% levels
                 name_fills <- name_fills[name_fills != "Others"]
+                
                 pal <- cols2(length(name_fills)) #calling fill palette 2
                 names(pal) <- name_fills #mapping names to colors 
                 

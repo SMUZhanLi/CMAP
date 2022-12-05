@@ -19,7 +19,7 @@ beta_pcoa_ui <- function(id) {
                            ),
                            column(6,
                                   pickerInput(ns("dist_method"),
-                                              "Distance method:",
+                                              "Adonis distance method:",
                                               choices = dist_method,
                                               selected = "bray"
                                   )
@@ -28,48 +28,119 @@ beta_pcoa_ui <- function(id) {
                        pickerInput(ns("group"), "Group:", NULL),
                        actionButton(ns("btn"), "Submit")
                    ),
-                   shinydashboardPlus::box(
-                       width = NULL,
-                       title = "Setting Plot",
-                       status = "warning",
-                       collapsible = TRUE,
-                       materialSwitch(ns("btn_adonis"), value = TRUE,label = "Adonis:",status = "primary"),
-                       uiOutput(ns("box_order")),
-                       fluidRow(
-                           column(width = 6,
-                                  style=list("padding-right: 5px;"),
-                                  numericInput(ns("width_slider"), "Width:", 10,1, 20)
-                           ),
-                           column(width = 6,
-                                  style=list("padding-left: 5px;"),
-                                  numericInput(ns("height_slider"), "Height:", 8, 1, 20)
-                           )
-                       ),
-                       fluidRow(
-                           column(width = 6,
-                                  style=list("padding-right: 5px;"),
-                                  selectInput(inputId = ns('extPlot'),
-                                              label = 'Output format',
-                                              choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
-                                  ),
-                           ),
-                           column(width = 6,
-                                  style=list("padding-left: 5px;"),
-                                  numericInput(ns("dpi"), "DPI:", 300, 100, 600)
-                           )
-                       ),
-                       fluidRow(
-                           column(width = 6,
-                                  downloadButton(ns("downloadPlot"), "Download Plot")),
-                           column(width = 6,
-                                  downloadButton(ns("downloadTable"), "Download Table"))
-                       ),
-                       h4("Color Palette"),
-                       fluidRow(
-                           column(6,
-                                  uiOutput(ns("color")))
-                       )
+                   tabBox(width = NULL,
+                          tabPanel(h5("Graphics Options"),
+                                   tags$b("Whether to show:"),
+                                   fluidRow(
+                                       column(4,
+                                              prettyCheckbox(
+                                                  inputId = ns("btn_ellipse"),
+                                                  label = "Ellipse",
+                                                  value = TRUE,
+                                                  status = "danger",
+                                                  shape = "curve"
+                                              )
+                                       ),
+                                       column(4,
+                                              prettyCheckbox(
+                                                  inputId = ns("ellipse_fill"),
+                                                  label = "Fill ellipse",
+                                                  value = FALSE,
+                                                  status = "danger",
+                                                  shape = "curve"
+                                              )
+                                       ),
+                                       column(4,
+                                              prettyCheckbox(
+                                                  inputId = ns("sample_label"),
+                                                  label = "Sample label",
+                                                  value = FALSE,
+                                                  status = "danger",
+                                                  shape = "curve"
+                                              )
+                                       ),
+                                   ),
+                                   fluidRow(
+                                       column(4,
+                                              prettyCheckbox(
+                                                  inputId = ns("btn_side"),
+                                                  label = "Side box",
+                                                  value = FALSE,
+                                                  status = "danger",
+                                                  shape = "curve"
+                                              )
+                                       ),
+                                       column(4,
+                                              prettyCheckbox(
+                                                  inputId = ns("btn_adonis"),
+                                                  label = "Adonis results",
+                                                  value = FALSE,
+                                                  status = "danger",
+                                                  shape = "curve"
+                                              )
+                                       )
+                                       
+                                   ),
+                                   fluidRow(
+                                       column(6,
+                                              numericInput(ns("lwd"), "Line width:", 0.5, 0, 2, 0.1)
+                                       ),
+                                       column(6,
+                                              selectInput(inputId = ns('line_type'),
+                                                          label = 'Line types',
+                                                          choices = c('Solid line' = "1",
+                                                                      "Dotted line" = "2")
+                                              )
+                                       )
+                                   ),
+                                   selectInput(inputId = ns('dim'),
+                                               label = 'Dimension',
+                                               choices = c('PCo1 and PCo2' = "2",
+                                                           "PCo1 and PCo3" = "3")
+                                   ),
+                                   uiOutput(ns("box_order"))
+                                   
+                          ),
+                          tabPanel(
+                              h5("Color"),
+                              fluidRow(
+                                  column(6,
+                                         uiOutput(ns("color")))
+                              )
+                          ),
+                          tabPanel(h5("Download"),
+                                   fluidRow(
+                                       column(width = 6,
+                                              style=list("padding-right: 5px;"),
+                                              numericInput(ns("width_slider"), "Width:", 10,1, 20)
+                                       ),
+                                       column(width = 6,
+                                              style=list("padding-left: 5px;"),
+                                              numericInput(ns("height_slider"), "Height:", 8, 1, 20)
+                                       )
+                                   ),
+                                   fluidRow(
+                                       column(width = 6,
+                                              style=list("padding-right: 5px;"),
+                                              selectInput(inputId = ns('extPlot'),
+                                                          label = 'Output format',
+                                                          choices = c('PDF' = '.pdf',"PNG" = '.png','TIFF'='.tiff')
+                                              ),
+                                       ),
+                                       column(width = 6,
+                                              style=list("padding-left: 5px;"),
+                                              numericInput(ns("dpi"), "DPI:", 300, 100, 600)
+                                       )
+                                   ),
+                                   fluidRow(
+                                       column(width = 6,
+                                              downloadButton(ns("downloadPlot"), "Download Plot")),
+                                       column(width = 6,
+                                              downloadButton(ns("downloadTable"), "Download Table"))
+                                   )
+                          )
                    )
+                  
             ),
             column(9,
                    jqui_resizable(
@@ -111,7 +182,6 @@ beta_pcoa_mod <- function(id, mpse) {
             })
             mp_pcoa <- eventReactive(input$btn, {
                 req(inherits(mpse, "MPSE"))
-                input$submit
                 std <- isolate({
                     input$std_method
                 })
@@ -143,21 +213,50 @@ beta_pcoa_mod <- function(id, mpse) {
                 group <- isolate({
                     input$group
                 })
-                ellipse <- mpse %>%
-                    mp_extract_sample() %>%
-                    pull(!!group) %>%
-                    is.character()
                 
-                p <- mp_pcoa() %>%
-                    mp_plot_ord(
-                        .ord = pcoa,
-                        .group = !!sym(group),
-                        .color = !!sym(group),
-                        ellipse = ellipse,
-                        show.legend = FALSE
-                    ) + cmap_theme 
+                dim_PC <- input$dim %>% as.numeric
+                dim_PC <- c(1, dim_PC)
                 
-                p$data[[group]] %<>% factor(level = input$items1)
+
+                if(input$ellipse_fill){
+                    p <- mp_pcoa() %>%
+                        mp_plot_ord(
+                            .ord = pcoa,
+                            .dim = dim_PC,
+                            .group = !!sym(group),
+                            .color = !!sym(group),
+                            geom = "polygon", 
+                            alpha = 0.25,
+                            ellipse = input$btn_ellipse,
+                            show.side = input$btn_side, 
+                            show.sample = input$sample_label,
+                            show.legend = FALSE,
+                            linetype = (input$line_type %>% as.numeric),
+                            lwd = input$lwd
+                        ) + 
+                        cmap_theme
+                }else{
+                    p <- mp_pcoa() %>%
+                        mp_plot_ord(
+                            .ord = pcoa,
+                            .dim = dim_PC,
+                            .group = !!sym(group),
+                            .color = !!sym(group),
+                            ellipse = input$btn_ellipse,
+                            show.side = input$btn_side, 
+                            show.sample = input$sample_label,
+                            show.legend = FALSE,
+                            linetype = (input$line_type %>% as.numeric),
+                            lwd = input$lwd
+                        ) + 
+                        cmap_theme
+                }
+
+                #Partition type 1
+                if(is.character(mp_extract_sample(mpse)[[group]])){
+                    p$data[[group]] %<>% factor(level = input$items1)
+                }
+                
                 
                 if(input$btn_adonis) {
                     adonis_value <- mp_pcoa() %>% mp_extract_internal_attr(name='adonis')
@@ -181,29 +280,33 @@ beta_pcoa_mod <- function(id, mpse) {
                                        inherit.aes = FALSE)
                 }
                 
+                
+                ##color model
                 color_content <- mpse %>% mp_extract_sample %>%
                     select(!!sym(group)) %>% unique #It is a tibble
                 
+                #Partition type 2
                 if(color_content[[1]] %>% is.numeric) {
                     return(p)
-                }
-                
-                ncolors <- color_content[[1]] %>% length #length of group 
-                color_input <- lapply(seq(ncolors), function (i){
-                    input[[paste0("colors",i)]]
-                }) %>% unlist #calling input color by length of group 
-                
-                if(length(color_input) != ncolors) {
-                    p <- p + 
-                        scale_color_manual(values = cc(ncolors)) + 
-                        scale_fill_manual(values = cc(ncolors)) 
                 }else{
-                    p <- p + 
-                        scale_color_manual(values = color_input) + 
-                        scale_fill_manual(values = color_input)
+                    ncolors <- color_content[[1]] %>% length #length of group 
+                    color_input <- lapply(seq(ncolors), function (i){
+                        input[[paste0("colors",i)]]
+                    }) %>% unlist #calling input color by length of group 
                     
+                    if(length(color_input) != ncolors) {
+                        p <- p + 
+                            scale_color_manual(values = cc(ncolors)) + 
+                            scale_fill_manual(values = cc(ncolors)) 
+                    }else{
+                        p <- p + 
+                            scale_color_manual(values = color_input) + 
+                            scale_fill_manual(values = color_input)
+                        
+                    }
+                    return(p)
                 }
-                return(p)
+
             })
             
             box_leves <- reactive({
@@ -211,6 +314,19 @@ beta_pcoa_mod <- function(id, mpse) {
                 input$btn
                 box_leves <- mp_extract_sample(mp_pcoa())[[input$group]] %>% unique
                 return(box_leves)
+            })
+            
+            output$box_order <- renderUI({
+                req(mp_pcoa())
+                group <- isolate({
+                    input$group
+                })
+                #Partition type 3
+                if(is.character(mp_extract_sample(mpse)[[group]])){
+                    orderInput(ns('items1'), 
+                               'Order (Drag items below)', 
+                               items = box_leves())
+                }
             })
             
             #Modify color
@@ -221,40 +337,40 @@ beta_pcoa_mod <- function(id, mpse) {
                     input$group
                 })
                 ns <- NS(id)
-                color_content <- mpse %>% mp_extract_sample %>% 
-                    select(!!sym(group)) %>% unique #It is a tibble
-                name_colors <- color_content[[1]] %>% sort #getting chr.
-                pal <- cc(length(name_colors)) #calling color palette
-                names(pal) <- name_colors #mapping names to colors 
-                
-                picks <- lapply(seq(pal), function(i) {#building multiple color pickers
-                    colorPickr(
-                        inputId = ns(paste0("colors",i)),
-                        label = names(pal[i]),
-                        selected = pal[[i]],
-                        swatches = cols,
-                        theme = "monolith",
-                        useAsButton = TRUE
-                    )
-                })
-                return(picks)
+                #Partition type 4
+                if(!is.numeric(mp_extract_sample(mpse)[[group]])){
+                    color_content <- mpse %>% mp_extract_sample %>% 
+                        select(!!sym(group)) %>% unique #It is a tibble
+                    name_colors <- color_content[[1]] %>% sort #getting chr.
+                    pal <- cc(length(name_colors)) #calling color palette
+                    names(pal) <- name_colors #mapping names to colors 
+                    
+                    picks <- lapply(seq(pal), function(i) {#building multiple color pickers
+                        colorPickr(
+                            inputId = ns(paste0("colors",i)),
+                            label = names(pal[i]),
+                            selected = pal[[i]],
+                            swatches = cols,
+                            theme = "monolith",
+                            useAsButton = TRUE
+                        )
+                    })
+                    return(picks)
+                }
+
             })
             
-            output$box_order <- renderUI({
-                req(mp_pcoa())
-                orderInput(ns('items1'), 'Boxes order (Drag items below)', items = box_leves())
-                
-            })
             
             output$plot <- renderPlot({
                 req(p_PCoA())
                 p_PCoA()
             })
             
-            output$color <- renderUI(
-                #req(color_list)
+            output$color <- renderUI({
+                req(mp_pcoa())
+                input$btn
                 color_list()
-            )
+            })
             
             output$downloadPlot <- downloadHandler(
                 filename = function(){
